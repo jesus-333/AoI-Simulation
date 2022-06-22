@@ -141,7 +141,7 @@ def compute_aoi_given_delta(delta_list, correction_list = []):
 
 #%%
 
-def simulation_V2(N, tot_time_simulation, service_rate, arrival_time_list, arrival_time_label, simulation_step = -1, laura_correction = False):
+def simulation_V2(N, tot_time_simulation, service_rate, arrival_time_list, arrival_time_label, simulation_step = -1, laura_correction = False, alpha = -1):
   """
   Function 
   """
@@ -170,6 +170,9 @@ def simulation_V2(N, tot_time_simulation, service_rate, arrival_time_list, arriv
   if(laura_correction): 
     laura_correction_factor_per_sensor = [[] for i in range(N)]
     laura_idx = 0
+    
+  if(alpha > 0 and alpha <= 1): use_correlation = True
+  else: use_correlation = False
 
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   # Simulation
@@ -188,8 +191,6 @@ def simulation_V2(N, tot_time_simulation, service_rate, arrival_time_list, arriv
         # Calculate the difference between the time step and the actual non positive waiting time
         # (This is needed due the fact that the simulation is discrete with a predefined step)
         processing_time_adjustement = process_time[i] + simulation_step
-        # print(round(process_time[i], 2), round(simulation_step, 2), round(processing_time_adjustement, 2))
-        # print("\t", time_in_queue[i])
         
         # Calculate the final amount of time spent in the system
         current_aoi_per_sensor[queue[i]] += processing_time_adjustement
@@ -203,6 +204,10 @@ def simulation_V2(N, tot_time_simulation, service_rate, arrival_time_list, arriv
 
         # Reset AoI for the current sensor
         current_aoi_per_sensor[queue[i]] = time_in_queue[i]
+        if(use_correlation): # In the case with correlation with probability alpha reset the AoI of all the sensor
+            if(np.random.rand(1)[0] < alpha): 
+                current_aoi_per_sensor = np.ones(N) * time_in_queue[i]
+                
 
         # Add the index to the list of element to remove
         # This is needed in case the waiting time of the next element is less or equal than the time_adjustment. 
@@ -214,7 +219,8 @@ def simulation_V2(N, tot_time_simulation, service_rate, arrival_time_list, arriv
 
 
         if(laura_correction): laura_correction_factor_per_sensor[queue[i]].append(time_in_queue[i])
-        # print("\tActual time:", actual_time)
+        
+
 
     # Remove all packet processed in this iteration
     # print("\t", len(queue), process_time)
@@ -267,6 +273,8 @@ service_rate = 1
 tot_time_simulation = 1000
 
 laura_correction = True
+
+alpha = 0.3
 
 generation_rate = 1/(0.08 * N)
 # arrival_time_list, arrival_time_label = preprocess_exp(N, tot_time_simulation, scale = 1 /generation_rate)
