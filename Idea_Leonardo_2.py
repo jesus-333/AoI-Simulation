@@ -206,7 +206,7 @@ def simulation_V2(N, tot_time_simulation, service_rate, arrival_time_list, arriv
         current_aoi_per_sensor[queue[i]] = time_in_queue[i]
         if(use_correlation): # In the case with correlation with probability alpha reset the AoI of all the sensor
             if(np.random.rand(1)[0] < alpha): 
-                current_aoi_per_sensor = np.ones(N) * time_in_queue[i]
+                current_aoi_per_sensor[:] = time_in_queue[i]
                 
 
         # Add the index to the list of element to remove
@@ -284,7 +284,7 @@ print(np.mean(np.diff(arrival_time_list)))
 # generation_rate = 1/(0.04 * N)
 # arrival_time_list, arrival_time_label = preprocess_deterministic(N, tot_time_simulation, generation_rate)
 
-aoi_list_per_sensor, laura_correction_factor_per_sensor, tmp_actual_time, tmp_evolution_aoi = simulation_V2(N, tot_time_simulation, service_rate, arrival_time_list, arrival_time_label, simulation_step = 1/service_rate, laura_correction = laura_correction)
+aoi_list_per_sensor, laura_correction_factor_per_sensor, tmp_actual_time, tmp_evolution_aoi = simulation_V2(N, tot_time_simulation, service_rate, arrival_time_list, arrival_time_label, simulation_step = 1/service_rate, laura_correction = laura_correction, alpha = alpha)
 print("Average AoI = ", np.mean(compute_final_aoi_per_sensor(aoi_list_per_sensor)), "(No correction)")
 print("Average AoI = ", np.mean(compute_final_aoi_per_sensor(aoi_list_per_sensor, laura_correction_factor_per_sensor)), "(Correction)")
 
@@ -294,19 +294,26 @@ print("Average AoI = ", np.mean(compute_final_aoi_per_sensor(aoi_list_per_sensor
 # # print(aoi_list_per_sensor)
 
 #%%
-# while(True):
-#     generation_rate = 1/(0.06 * N)
-#     # arrival_time_list, arrival_time_label = preprocess_exp(N, tot_time_s    imulation, scale = 1 /generation_rate)
-#     arrival_time_list, arrival_time_label = preprocess_exp_V2(N, tot_time_simulation, scale = 1 /generation_rate)
-#     if(np.mean(np.diff(arrival_time_list)) >= 1): break
+
     
 a1 = []
 a2 = []
 
-for i in range(250):
+b1 = []
+b2 = []
+
+alpha = 0.2
+
+for i in range(25):
     aoi_list_per_sensor, laura_correction_factor_per_sensor, tmp_actual_time, tmp_evolution_aoi = simulation_V2(N, tot_time_simulation, service_rate, arrival_time_list, arrival_time_label, simulation_step = 1/service_rate, laura_correction = laura_correction)
     a1.append(np.mean(compute_final_aoi_per_sensor(aoi_list_per_sensor)))
     a2.append(np.mean(compute_final_aoi_per_sensor(aoi_list_per_sensor, laura_correction_factor_per_sensor)))
+    
+    aoi_list_per_sensor, laura_correction_factor_per_sensor, tmp_actual_time, tmp_evolution_aoi = simulation_V2(N, tot_time_simulation, service_rate, arrival_time_list, arrival_time_label, simulation_step = 1/service_rate, laura_correction = laura_correction, alpha = alpha)
+    b1.append(np.mean(compute_final_aoi_per_sensor(aoi_list_per_sensor)))
+    b2.append(np.mean(compute_final_aoi_per_sensor(aoi_list_per_sensor, laura_correction_factor_per_sensor)))
 
 print("Average AoI = ", np.mean(a1), "(No correction)")
 print("Average AoI = ", np.mean(a2), "(Correction)")
+print("Average AoI = ", np.mean(b1), "(No correction)(Alpha)")
+print("Average AoI = ", np.mean(b2), "(Correction)(Alpha)")
