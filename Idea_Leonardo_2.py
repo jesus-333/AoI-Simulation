@@ -261,10 +261,8 @@ def simulation_V2(N, tot_time_simulation, service_rate, arrival_time_list, arriv
 
 #%%
 
-
 # Number of sensors
 N = 15
-
 
 # Average rate of service for the server in second
 service_rate = 1
