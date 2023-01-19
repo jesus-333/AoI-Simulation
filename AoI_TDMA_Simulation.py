@@ -59,7 +59,7 @@ def simulation(N, T, p_tx, alpha):
     return np.asarray(age_list)
 
 
-def simulation_V2():
+def simulation_V2(N, T, initial_p_tx, alpha, increase_function):
     """
     Simulation where each sensor can transmit only during its turn according to a transmission probability
     In this simulation the transmission probability is a increasing function of the AoI, i.e. higher the AoI higher the transmission probability
@@ -74,18 +74,27 @@ def simulation_V2():
     age_list = []
     idx_tx = 0
 
-    if type(p_tx) == float: p_tx = np.ones(N) * p_tx
-
+    # if type(initial_p_tx) == float: p_tx = np.ones(N) * initial_p_tx
+    # else: raise ValueError("initial_p_tx must be a float between 0 and 1")
+    p_tx = np.ones(N) * initial_p_tx
+    
     for t in range(T):
         current_age += 1
 
-        # Reset the AoI of the sensor IF do the transmission during its turn
-        if np.random.rand(1) < p_tx[idx_tx]:
+        
+        if np.random.rand(1) < p_tx[idx_tx]: # Transmission 
+            # Reset the AoI of the sensor IF do the transmission during its turn    
             current_age[idx_tx] = 0
 
             # With probability alpha reset the AoI of all the sensor
             if np.random.rand(1) < alpha:
                 current_age[:] = 0
+            
+            # Reset the transmission probability
+            p_tx = np.ones(N) * initial_p_tx
+        else: # No transmission
+            new_p_tx = increase_function(p_tx[0])
+            p_tx = np.ones(N) * new_p_tx
 
         # Advance the transmission index
         idx_tx += 1
@@ -96,19 +105,22 @@ def simulation_V2():
 
     return np.asarray(age_list)
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Simulation settings and multiple parameter simulation
+
 def get_simualtion_config():
     config = dict(
         N = 10,
         T = 500,
-        p_tx_array = np.geomspace(1e-2, 0.3, 400),
-        alpha_array = np.geomspace(1e-3, 1, 200),
+        p_tx_array = np.geomspace(1e-2, 0.3, 100),
+        alpha_array = np.geomspace(1e-3, 1, 50),
         print_var = True
     )
 
     return config
 
 
-def simulate_multiple_parameters():
+def simulate_multiple_parameters_V1():
     config = get_simualtion_config()
 
     p_tx_array = config['p_tx_array']
@@ -121,10 +133,42 @@ def simulate_multiple_parameters():
         p_tx = p_tx_array[i]
         for j in range(len(alpha_array)):
             alpha = alpha_array[j]
+
+            # Compute the simulation
             aoi_history = simulation(config['N'], config['T'], p_tx, alpha)
             
+            # Compute the mean AoI for this set of parameter and save the results
             mean_age_list.append(aoi_history.mean(0))
+            mean_age_surface[i, j] = mean_age_list[-1].mean()
+        
+        if config['print_var']:
+            print(round((i + 1)/len(p_tx_array) * 100, 2))
+
+    mean_age = np.asarray(mean_age_list)
+
+    return mean_age_surface, mean_age
+
+def simulate_multiple_parameters_V2():
+    config = get_simualtion_config()
+
+    p_tx_array = config['p_tx_array']
+    alpha_array = config['alpha_array']
+
+    mean_age_list = []
+    mean_age_surface = np.zeros((len(p_tx_array), len(alpha_array)))
+
+    increase_function = lambda x: x + 0.01 if x < 1 else 1
+
+    for i in range(len(p_tx_array)):
+        p_tx = p_tx_array[i]
+        for j in range(len(alpha_array)):
+            alpha = alpha_array[j]
+
+            # Compute the simulation
+            aoi_history = simulation_V2(config['N'], config['T'], p_tx, alpha, increase_function)
             
+            # Compute the mean AoI for this set of parameter and save the results
+            mean_age_list.append(aoi_history.mean(0))
             mean_age_surface[i, j] = mean_age_list[-1].mean()
         
         if config['print_var']:
@@ -166,6 +210,7 @@ def plot_AoI_surface(p_tx_array, alpha_array, mean_age_surface):
     ax.set_ylabel('alpha')
 
     cbar.ax.set_ylabel('Average AoI')
+    plt.show()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 #%% Main function
