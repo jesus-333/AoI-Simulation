@@ -58,6 +58,44 @@ def simulation(N, T, p_tx, alpha):
 
     return np.asarray(age_list)
 
+
+def simulation_V2():
+    """
+    Simulation where each sensor can transmit only during its turn according to a transmission probability
+    In this simulation the transmission probability is a increasing function of the AoI, i.e. higher the AoI higher the transmission probability
+
+    N = number of sensors
+    T = unit of time to simulate. (i.e. the simulation advance with a discrete step and each iteration corresponde to a single unit of time)
+    p_tx = probability of transmission for the various sensor
+    alpha = probability that a transmission of a sensor reset the AoI of all sensors
+    """
+
+    current_age = np.zeros(N)
+    age_list = []
+    idx_tx = 0
+
+    if type(p_tx) == float: p_tx = np.ones(N) * p_tx
+
+    for t in range(T):
+        current_age += 1
+
+        # Reset the AoI of the sensor IF do the transmission during its turn
+        if np.random.rand(1) < p_tx[idx_tx]:
+            current_age[idx_tx] = 0
+
+            # With probability alpha reset the AoI of all the sensor
+            if np.random.rand(1) < alpha:
+                current_age[:] = 0
+
+        # Advance the transmission index
+        idx_tx += 1
+        if idx_tx >= N: idx_tx = 0
+
+        # Save the current age
+        age_list.append(current_age.copy())
+
+    return np.asarray(age_list)
+
 def get_simualtion_config():
     config = dict(
         N = 10,
@@ -70,7 +108,7 @@ def get_simualtion_config():
     return config
 
 
-def simulate_multiple_value():
+def simulate_multiple_parameters():
     config = get_simualtion_config()
 
     p_tx_array = config['p_tx_array']
@@ -128,3 +166,13 @@ def plot_AoI_surface(p_tx_array, alpha_array, mean_age_surface):
     ax.set_ylabel('alpha')
 
     cbar.ax.set_ylabel('Average AoI')
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+#%% Main function
+
+def main():
+    pass
+
+
+if __name__ == "__main__":
+    main()
