@@ -36,7 +36,8 @@ def simulation(N, T, p_tx, alpha):
     age_list = []
     idx_tx = 0
 
-    if type(p_tx) == float: p_tx = np.ones(N) * p_tx
+    # if type(p_tx) == float: p_tx = np.ones(N) * p_tx
+    p_tx = np.ones(N) * p_tx
 
     for t in range(T):
         current_age += 1
@@ -179,11 +180,48 @@ def simulate_multiple_parameters_V2():
     return mean_age_surface, mean_age
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Theoretical model
+
+def compute_AoI_theory(p_tx, N, alpha):
+    p = p_tx
+
+    # aoi_current_sensor = (N * p * (1 - p) ** N) / (1 - (1 - p) ** N) ** 2
+    aoi_current_sensor = N * (1 - p) / p
+
+    aoi_other_sensor = alpha * ( (1 - p) / p - (N * p * (1 - p) ** N) / (1 - (1 - p) ** N) ** 2)
+
+    final_aoi = aoi_current_sensor + aoi_other_sensor
+
+    return final_aoi
+
+def compute_AoI_theory_multiple_parameter():
+    config = get_simualtion_config()
+
+    p_tx_array = config['p_tx_array']
+    alpha_array = config['alpha_array']
+
+    mean_age_surface = np.zeros((len(p_tx_array), len(alpha_array)))
+
+    for i in range(len(p_tx_array)):
+        p_tx = p_tx_array[i]
+        for j in range(len(alpha_array)):
+            alpha = alpha_array[j]
+
+            
+            # Compute the mean AoI for this set of parameter and save the results
+            mean_age_surface[i, j] = compute_AoI_theory(p_tx, config['N'], alpha)
+        
+        if config['print_var']:
+            print(round((i + 1)/len(p_tx_array) * 100, 2))
+
+    return mean_age_surface
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 #%% Plot function
 
 def get_plot_config():
     config = dict(
-        use_imshow = True,
+        use_imshow = False,
         add_color_bar = True
     )
 
