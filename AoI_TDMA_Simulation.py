@@ -112,7 +112,7 @@ def simulation_V2(N, T, initial_p_tx, alpha, increase_function):
 def get_simualtion_config():
     config = dict(
         N = 10,
-        T = 500,
+        T = 1500,
         p_tx_array = np.geomspace(1e-2, 0.3, 100),
         alpha_array = np.geomspace(1e-3, 1, 50),
         print_var = True
@@ -184,13 +184,41 @@ def simulate_multiple_parameters_V2():
 
 def compute_AoI_theory(p_tx, N, alpha):
     p = p_tx
+    
+    n_iterations = 2000
 
-    # aoi_current_sensor = (N * p * (1 - p) ** N) / (1 - (1 - p) ** N) ** 2
-    aoi_current_sensor = N * (1 - p) / p
+    A1 = 0
+    i = 0
+    while i < n_iterations:
+        a1_i = ((1 - p) ** i) * ((1 - alpha * p) ** (i * (N - 1))) * p * N * i
+        A1 += a1_i
 
-    aoi_other_sensor = alpha * ( (1 - p) / p - (N * p * (1 - p) ** N) / (1 - (1 - p) ** N) ** 2)
+        i += 1
 
-    final_aoi = aoi_current_sensor + aoi_other_sensor
+    A2 = 0
+    j = 0
+    while j < n_iterations:
+        # if j % N != 0:
+        #     term_1 = (1 - p) ** (np.floor(j/N) + 1)
+        #     term_2 = (1 - alpha * p) ** (j - np.floor(j/N) + 1)
+        #     a2_j = j * term_1 * term_2 * alpha * p
+        #     
+        #     A2 += a2_j
+
+        k = 1
+        term_1 = alpha * p * (1 - p) ** (j + 1)
+        tmp_a2 = 0
+        while k <= N - 1:
+            term_2 = (1 - alpha * p) ** (j * N + k - 1)
+            term_3 = j * N + k
+            tmp_a2 += term_2 * term_3
+            k += 1
+ 
+        a2_j = term_1 * tmp_a2 
+        A2 += a2_j
+        j += 1
+
+    final_aoi = A1 + A2
 
     return final_aoi
 
