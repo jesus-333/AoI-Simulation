@@ -182,10 +182,8 @@ def simulate_multiple_parameters_V2():
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 # Theoretical model
 
-def compute_AoI_theory(p_tx, N, alpha):
+def compute_AoI_theory_partial_sum(p_tx, N, alpha, n_iterations = 2000):
     p = p_tx
-    
-    n_iterations = 2000
 
     A1 = 0
     i = 0
@@ -198,13 +196,6 @@ def compute_AoI_theory(p_tx, N, alpha):
     A2 = 0
     j = 0
     while j < n_iterations:
-        # if j % N != 0:
-        #     term_1 = (1 - p) ** (np.floor(j/N) + 1)
-        #     term_2 = (1 - alpha * p) ** (j - np.floor(j/N) + 1)
-        #     a2_j = j * term_1 * term_2 * alpha * p
-        #     
-        #     A2 += a2_j
-
         k = 1
         term_1 = alpha * p * (1 - p) ** (j + 1)
         tmp_a2 = 0
@@ -222,7 +213,23 @@ def compute_AoI_theory(p_tx, N, alpha):
 
     return final_aoi
 
-def compute_AoI_theory_multiple_parameter():
+def compute_AoI_theory_closed_form(p_tx, N, alpha):
+    p = p_tx
+    
+    q = (1 - alpha * p)
+    r = ((1 - p) * (q ** N))
+
+    B = (alpha * p * (1 - p) * N) / q
+    C = (q - q ** N) / (1 - q)
+    D = ((N - 1) * (q ** (N + 1)) - N * (q ** N) + q) / ((1 - q) ** 2)
+
+    aoi = B * ( (C * r) / ((1 - r) ** 2) + (D * r) / (1 - r))
+
+    return aoi
+
+
+
+def compute_AoI_theory_multiple_parameter(compute_with_partial_sum = False):
     config = get_simualtion_config()
 
     p_tx_array = config['p_tx_array']
@@ -237,7 +244,10 @@ def compute_AoI_theory_multiple_parameter():
 
             
             # Compute the mean AoI for this set of parameter and save the results
-            mean_age_surface[i, j] = compute_AoI_theory(p_tx, config['N'], alpha)
+            if compute_with_partial_sum:
+                mean_age_surface[i, j] = compute_AoI_theory_partial_sum(p_tx, config['N'], alpha)
+            else:
+                mean_age_surface[i, j] = compute_AoI_theory_closed_form(p_tx, config['N'], alpha)
         
         if config['print_var']:
             print(round((i + 1)/len(p_tx_array) * 100, 2))
