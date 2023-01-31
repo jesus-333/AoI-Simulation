@@ -112,7 +112,7 @@ def simulation_V2(N, T, initial_p_tx, alpha, increase_function):
 def get_simualtion_config():
     config = dict(
         N = 10,
-        T = 1500,
+        T = 18000,
         p_tx_array = np.geomspace(1e-2, 0.3, 100),
         alpha_array = np.geomspace(1e-3, 1, 50),
         print_var = True
@@ -180,11 +180,20 @@ def simulate_multiple_parameters_V2():
     return mean_age_surface, mean_age
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-# Theoretical model
+# Theoretical model (PARTIAL SUM)
 
 def compute_AoI_theory_partial_sum(p_tx, N, alpha, n_iterations = 2000):
     p = p_tx
+    
+    A1 = compute_A1_partial_sum(p, N, alpha, n_iterations)
+    
+    A2 = compute_A2_partial_sum(p, N, alpha, n_iterations)
+    
+    aoi = A1 + A2
 
+    return aoi
+
+def compute_A1_partial_sum(p, N, alpha, n_iterations = 2000):
     A1 = 0
     i = 0
     while i < n_iterations:
@@ -193,6 +202,9 @@ def compute_AoI_theory_partial_sum(p_tx, N, alpha, n_iterations = 2000):
 
         i += 1
 
+    return A1
+
+def compute_A2_partial_sum(p, N, alpha, n_iterations = 2000):
     A2 = 0
     j = 0
     while j < n_iterations:
@@ -208,14 +220,30 @@ def compute_AoI_theory_partial_sum(p_tx, N, alpha, n_iterations = 2000):
         a2_j = term_1 * tmp_a2 
         A2 += a2_j
         j += 1
+    
+    return A2
 
-    final_aoi = A1 + A2
-
-    return final_aoi
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Theoretical model (CLOSED FORM)
 
 def compute_AoI_theory_closed_form(p_tx, N, alpha):
     p = p_tx
+
+    A1 = compute_A1_closed_form(p, N, alpha)
+
+    A2 = compute_A2_closed_form(p, N, alpha)
     
+    aoi = A1 + A2
+
+    return aoi
+
+def compute_A1_closed_form(p, N, alpha):
+    q =  (1 - p) * ((1 - alpha * p) ** (N - 1))
+    A1 = (N * p * q) / ((1 - q) ** 2)
+
+    return A1
+
+def compute_A2_closed_form(p, N, alpha):
     q = (1 - alpha * p)
     r = ((1 - p) * (q ** N))
 
@@ -223,11 +251,9 @@ def compute_AoI_theory_closed_form(p_tx, N, alpha):
     C = (q - q ** N) / (1 - q)
     D = ((N - 1) * (q ** (N + 1)) - N * (q ** N) + q) / ((1 - q) ** 2)
 
-    aoi = B * ( (C * r) / ((1 - r) ** 2) + (D * r) / (1 - r))
-
-    return aoi
-
-
+    A2 = B * ( (C * r) / ((1 - r) ** 2) + (D * r) / (1 - r))
+    
+    return A2
 
 def compute_AoI_theory_multiple_parameter(compute_with_partial_sum = False):
     config = get_simualtion_config()
@@ -259,6 +285,8 @@ def compute_AoI_theory_multiple_parameter(compute_with_partial_sum = False):
 
 def get_plot_config():
     config = dict(
+        figsize = (15, 10),
+        fontsize = 15,
         use_imshow = False,
         add_color_bar = True
     )
@@ -268,24 +296,31 @@ def get_plot_config():
 def plot_AoI_surface(p_tx_array, alpha_array, mean_age_surface):
     config = get_plot_config()
 
-    fig, ax = plt.subplots()
-    
+    fig, ax = plt.subplots(figsize = config['figsize'])
+    plt.rcParams.update({'font.size': config['fontsize']})
+
     if config['use_imshow']:
-        cs = ax.imshow(mean_age_surface)
-        plt.xticks(p_tx_array)
-        plt.yticks(alpha_array)
+        # extent = [xmin,xmax,ymin,ymax]
+        extent = [p_tx_array[0], p_tx_array[-1], alpha_array[0], alpha_array[-1]]
+
+        cs = ax.imshow(mean_age_surface, extent = extent, interpolation='nearest', aspect='auto')
+        # ax.set_xticks(p_tx_array)
+        # ax.set_yticks(alpha_array)
     else:
-        cs = ax.contourf(p_tx_array, alpha_array, mean_age_surface)
+        cs = ax.contourf(p_tx_array, alpha_array, mean_age_surface, levels = 20)
     
+        ax.set_yscale('log')
+        ax.set_xscale('log')
+
     if config['add_color_bar']:
         cbar = fig.colorbar(cs)
 
-    ax.set_yscale('log')
-    ax.set_xscale('log')
     ax.set_xlabel('Transmission probability p')
     ax.set_ylabel('alpha')
 
     cbar.ax.set_ylabel('Average AoI')
+    
+    plt.tight_layout()
     plt.show()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -297,3 +332,16 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    # a1_closed = np.zeros((len(p), len(alpha)))
+    # a1_sum = np.zeros((len(p), len(alpha)))
+    # a2_closed = np.zeros((len(p), len(alpha)))
+    # a2_sum = np.zeros((len(p), len(alpha)))
+    #
+    # N = 10
+    # for i in range(len(p)):
+    #     for j in range(len(alpha)):
+    #         a1_closed[i, j] = AoI.compute_A1_closed_form(p[i], N, alpha[j])
+    #         a2_closed[i, j] = AoI.compute_A2_closed_form(p[i], N, alpha[j])
+    #         a1_sum[i, j] = AoI.compute_A1_partial_sumsum(p[i], N, alpha[j])
+    #         a2_sum[i, j] = AoI.compute_A2_partial_sum(p[i], N, alpha[j])
