@@ -209,7 +209,7 @@ def compute_A2_partial_sum(p, N, alpha, n_iterations = 2000):
     j = 0
     while j < n_iterations:
         k = 1
-        term_1 = alpha * p * (1 - p) ** (j + 1)
+        term_1 = alpha * p * ((1 - p) ** (j + 1))
         tmp_a2 = 0
         while k <= N - 1:
             term_2 = (1 - alpha * p) ** (j * N + k - 1)
@@ -248,10 +248,10 @@ def compute_A2_closed_form(p, N, alpha):
     r = ((1 - p) * (q ** N))
 
     B = (alpha * p * (1 - p) * N) / q
-    C = (q - q ** N) / (1 - q)
-    D = ((N - 1) * (q ** (N + 1)) - N * (q ** N) + q) / ((1 - q) ** 2)
+    C = (q - (q ** N)) / (1 - q)
+    D = ( (N - 1) * (q ** (N + 1)) - (N * (q ** N)) + q) / ((1 - q) ** 2)
 
-    A2 = B * ( (C * r) / ((1 - r) ** 2) + (D * r) / (1 - r))
+    A2 = B * (((C * r) / ((1 - r) ** 2)) + (D / (1 - r)))
     
     return A2
 
@@ -288,13 +288,18 @@ def get_plot_config():
         figsize = (15, 10),
         fontsize = 15,
         use_imshow = False,
-        add_color_bar = True
+        levels_countourf = 20,
+        add_color_bar = True,
     )
 
     return config
 
 def plot_AoI_surface(p_tx_array, alpha_array, mean_age_surface):
+    # Get config and check them
     config = get_plot_config()
+    if 'save_fig' not in config: config['save_fig'] = False
+    if 'levels_countourf' not in config: config['levels_countourf'] = 10
+    if 'add_color_bar' not in config: config['add_color_bar'] = True
 
     fig, ax = plt.subplots(figsize = config['figsize'])
     plt.rcParams.update({'font.size': config['fontsize']})
@@ -316,12 +321,23 @@ def plot_AoI_surface(p_tx_array, alpha_array, mean_age_surface):
         cbar = fig.colorbar(cs)
 
     ax.set_xlabel('Transmission probability p')
-    ax.set_ylabel('alpha')
+    ax.set_ylabel('q')
 
     cbar.ax.set_ylabel('Average AoI')
     
     plt.tight_layout()
     plt.show()
+
+    if config['save_fig']:
+        name = "aoi_surface_N{}".format(N)
+
+        file_type = 'png'
+        filename = "{}.{}".format(name, file_type)
+        plt.savefig(filename, format=file_type)
+
+        file_type = 'eps'
+        filename = "{}.{}".format(name, file_type)
+        plt.savefig(filename, format=file_type)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 #%% Main function
