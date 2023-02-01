@@ -111,11 +111,14 @@ def simulation_V2(N, T, initial_p_tx, alpha, increase_function):
 
 def get_simualtion_config():
     config = dict(
-        N = 10,
         T = 18000,
-        p_tx_array = np.geomspace(1e-2, 0.3, 100),
-        alpha_array = np.geomspace(1e-3, 1, 50),
-        print_var = True
+        # p_tx_array = np.geomspace(1e-2, 0.3, 150),
+        # alpha_array = np.geomspace(1e-3, 1, 75),
+        p_tx_array = [0.005, 0.01, 0.02, 0.05],
+        alpha_array = [0.05, 0.1],
+        N_array = np.linspace(1, 60, 60),
+        print_var = True,
+        n_iterations = 500,
     )
 
     return config
@@ -126,28 +129,31 @@ def simulate_multiple_parameters_V1():
 
     p_tx_array = config['p_tx_array']
     alpha_array = config['alpha_array']
+    N_array = config['N_array']
 
     mean_age_list = []
-    mean_age_surface = np.zeros((len(p_tx_array), len(alpha_array)))
+    mean_age_array = np.zeros((len(p_tx_array), len(alpha_array), len(N_array)))
 
     for i in range(len(p_tx_array)):
         p_tx = p_tx_array[i]
         for j in range(len(alpha_array)):
             alpha = alpha_array[j]
+            for k in range(len(N_array)):
+                N = N_array[k]
 
-            # Compute the simulation
-            aoi_history = simulation(config['N'], config['T'], p_tx, alpha)
-            
-            # Compute the mean AoI for this set of parameter and save the results
-            mean_age_list.append(aoi_history.mean(0))
-            mean_age_surface[i, j] = mean_age_list[-1].mean()
+                # Compute the simulation
+                aoi_history = simulation(N, config['T'], p_tx, alpha)
+                
+                # Compute the mean AoI for this set of parameter and save the results
+                mean_age_list.append(aoi_history.mean(0))
+                mean_age_array [i, j, k] = mean_age_list[-1].mean()
         
         if config['print_var']:
             print(round((i + 1)/len(p_tx_array) * 100, 2))
 
     mean_age = np.asarray(mean_age_list)
 
-    return mean_age_surface, mean_age
+    return mean_age_array, mean_age
 
 def simulate_multiple_parameters_V2():
     config = get_simualtion_config()
@@ -257,28 +263,30 @@ def compute_A2_closed_form(p, N, alpha):
 
 def compute_AoI_theory_multiple_parameter(compute_with_partial_sum = False):
     config = get_simualtion_config()
-
+    
     p_tx_array = config['p_tx_array']
     alpha_array = config['alpha_array']
+    N_array = config['N_array']
 
-    mean_age_surface = np.zeros((len(p_tx_array), len(alpha_array)))
+    mean_age_array = np.zeros((len(p_tx_array), len(alpha_array), len(N_array)))
 
     for i in range(len(p_tx_array)):
         p_tx = p_tx_array[i]
         for j in range(len(alpha_array)):
             alpha = alpha_array[j]
-
+            for k in range(len(N_array)):
+                N = N_array[k]
             
-            # Compute the mean AoI for this set of parameter and save the results
-            if compute_with_partial_sum:
-                mean_age_surface[i, j] = compute_AoI_theory_partial_sum(p_tx, config['N'], alpha)
-            else:
-                mean_age_surface[i, j] = compute_AoI_theory_closed_form(p_tx, config['N'], alpha)
+                # Compute the mean AoI for this set of parameter and save the results
+                if compute_with_partial_sum:
+                    mean_age_array [i, j, k] = compute_AoI_theory_partial_sum(p_tx, N, alpha, config['n_iterations'])
+                else:
+                    mean_age_array [i, j, k] = compute_AoI_theory_closed_form(p_tx, N, alpha)
         
         if config['print_var']:
             print(round((i + 1)/len(p_tx_array) * 100, 2))
 
-    return mean_age_surface
+    return mean_age_array
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 #%% Plot function
@@ -290,6 +298,7 @@ def get_plot_config():
         use_imshow = False,
         levels_countourf = 20,
         add_color_bar = True,
+        save_fig = True,
     )
 
     return config
@@ -321,15 +330,16 @@ def plot_AoI_surface(p_tx_array, alpha_array, mean_age_surface):
         cbar = fig.colorbar(cs)
 
     ax.set_xlabel('Transmission probability p')
-    ax.set_ylabel('q')
+    ax.set_ylabel('Probability $q$ of a useful update from a neighbor')
 
     cbar.ax.set_ylabel('Average AoI')
     
     plt.tight_layout()
-    plt.show()
 
     if config['save_fig']:
-        name = "aoi_surface_N{}".format(N)
+        N = 10
+        type_aoi = 'theory'
+        name = "aoi_surface_N{}_{}".format(N, type_aoi)
 
         file_type = 'png'
         filename = "{}.{}".format(name, file_type)
@@ -338,6 +348,8 @@ def plot_AoI_surface(p_tx_array, alpha_array, mean_age_surface):
         file_type = 'eps'
         filename = "{}.{}".format(name, file_type)
         plt.savefig(filename, format=file_type)
+
+    plt.show()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 #%% Main function
