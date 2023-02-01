@@ -112,11 +112,12 @@ def simulation_V2(N, T, initial_p_tx, alpha, increase_function):
 def get_simualtion_config():
     config = dict(
         T = 18000,
-        # p_tx_array = np.geomspace(1e-2, 0.3, 150),
-        # alpha_array = np.geomspace(1e-3, 1, 75),
-        p_tx_array = [0.005, 0.01, 0.02, 0.05],
-        alpha_array = [0.05, 0.1],
-        N_array = np.linspace(1, 60, 60),
+        p_tx_array = np.geomspace(1e-2, 0.3, 120),
+        alpha_array = np.geomspace(1e-3, 1, 60),
+        N_array = [10, 30],
+        # p_tx_array = [0.005, 0.01, 0.02, 0.05],
+        # alpha_array = [0.1, 0.5],
+        # N_array = np.linspace(1, 60, 60),
         print_var = True,
         n_iterations = 500,
     )
@@ -139,7 +140,7 @@ def simulate_multiple_parameters_V1():
         for j in range(len(alpha_array)):
             alpha = alpha_array[j]
             for k in range(len(N_array)):
-                N = N_array[k]
+                N = int(N_array[k])
 
                 # Compute the simulation
                 aoi_history = simulation(N, config['T'], p_tx, alpha)
@@ -293,12 +294,21 @@ def compute_AoI_theory_multiple_parameter(compute_with_partial_sum = False):
 
 def get_plot_config():
     config = dict(
+        # - - - - - - - - - - - - -
+        # Common parameters
         figsize = (15, 10),
-        fontsize = 15,
+        fontsize = 28,
+        save_fig = False,
+        # - - - - - - - - - - - - -
+        # Parameters for aoi surface
         use_imshow = False,
         levels_countourf = 20,
         add_color_bar = True,
-        save_fig = True,
+        # - - - - - - - - - - - - -
+        # Parameters for aoi vs N
+        labels = ["p = {}".format(p) for p in [0.005, 0.01, 0.02, 0.05]],
+        idx_to_plot = [(i, 1) for i in range(4) ],
+        linestyle = ['solid', 'dotted', 'dashed', 'dashdot']
     )
 
     return config
@@ -334,6 +344,7 @@ def plot_AoI_surface(p_tx_array, alpha_array, mean_age_surface):
 
     cbar.ax.set_ylabel('Average AoI')
     
+    fig.tight_layout()
     plt.tight_layout()
 
     if config['save_fig']:
@@ -351,6 +362,33 @@ def plot_AoI_surface(p_tx_array, alpha_array, mean_age_surface):
 
     plt.show()
 
+
+def plot_aoi_vs_N(N_array, aoi_array):
+    config = get_plot_config()
+    
+    fig, ax = plt.subplots(1, 1, figsize = (15, 10)) 
+    plt.rcParams.update({'font.size': config['fontsize']})
+    
+    for i in range(len(config['idx_to_plot'])):
+        tmp_idx = config['idx_to_plot'][i]
+        
+        ax.plot(N_array, aoi_array[tmp_idx[0], tmp_idx[1], :], 
+                label = config['labels'][i], linestyle = config['linestyle'][i], linewidth = 2.5)
+
+    ax.legend()
+    
+    ax.set_xlabel("Number of neighbors")
+    ax.set_ylabel("AoI")
+    ax.grid(True)
+
+    ax.set_xlim([N_array[0], N_array[-1]])
+    ax.set_yscale('log')
+
+    fig.tight_layout()
+    plt.tight_layout()
+
+    plt.show()
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 #%% Main function
 
@@ -361,15 +399,3 @@ def main():
 if __name__ == "__main__":
     main()
 
-    # a1_closed = np.zeros((len(p), len(alpha)))
-    # a1_sum = np.zeros((len(p), len(alpha)))
-    # a2_closed = np.zeros((len(p), len(alpha)))
-    # a2_sum = np.zeros((len(p), len(alpha)))
-    #
-    # N = 10
-    # for i in range(len(p)):
-    #     for j in range(len(alpha)):
-    #         a1_closed[i, j] = AoI.compute_A1_closed_form(p[i], N, alpha[j])
-    #         a2_closed[i, j] = AoI.compute_A2_closed_form(p[i], N, alpha[j])
-    #         a1_sum[i, j] = AoI.compute_A1_partial_sumsum(p[i], N, alpha[j])
-    #         a2_sum[i, j] = AoI.compute_A2_partial_sum(p[i], N, alpha[j])
