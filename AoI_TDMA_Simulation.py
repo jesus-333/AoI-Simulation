@@ -112,12 +112,12 @@ def simulation_V2(N, T, initial_p_tx, alpha, increase_function):
 def get_simualtion_config():
     config = dict(
         T = 18000,
-        p_tx_array = np.geomspace(1e-2, 0.3, 120),
-        alpha_array = np.geomspace(1e-3, 1, 60),
-        N_array = [10, 30],
-        # p_tx_array = [0.005, 0.01, 0.02, 0.05],
-        # alpha_array = [0.1, 0.5],
+        # p_tx_array = np.geomspace(1e-2, 0.3, 120),
+        # alpha_array = np.geomspace(1e-3, 1, 60),
         # N_array = np.linspace(1, 60, 60),
+        N_array = [4],
+        p_tx_array = [0.33],
+        alpha_array = [0.25],
         print_var = True,
         n_iterations = 500,
     )
@@ -161,9 +161,10 @@ def simulate_multiple_parameters_V2():
 
     p_tx_array = config['p_tx_array']
     alpha_array = config['alpha_array']
+    N_array = config['N_array']
 
     mean_age_list = []
-    mean_age_surface = np.zeros((len(p_tx_array), len(alpha_array)))
+    mean_age_array = np.zeros((len(p_tx_array), len(alpha_array), len(N_array)))
 
     increase_function = lambda x: x + 0.01 if x < 1 else 1
 
@@ -171,20 +172,22 @@ def simulate_multiple_parameters_V2():
         p_tx = p_tx_array[i]
         for j in range(len(alpha_array)):
             alpha = alpha_array[j]
+            for k in range(len(N_array)):
+                N = int(N_array[k])
 
-            # Compute the simulation
-            aoi_history = simulation_V2(config['N'], config['T'], p_tx, alpha, increase_function)
-            
-            # Compute the mean AoI for this set of parameter and save the results
-            mean_age_list.append(aoi_history.mean(0))
-            mean_age_surface[i, j] = mean_age_list[-1].mean()
+                # Compute the simulation
+                aoi_history = simulation_V2(N, config['T'], p_tx, alpha, increase_function)
+                
+                # Compute the mean AoI for this set of parameter and save the results
+                mean_age_list.append(aoi_history.mean(0))
+                mean_age_array[i, j, k] = mean_age_list[-1].mean()
         
         if config['print_var']:
             print(round((i + 1)/len(p_tx_array) * 100, 2))
 
     mean_age = np.asarray(mean_age_list)
 
-    return mean_age_surface, mean_age
+    return mean_age_array, mean_age
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 # Theoretical model (PARTIAL SUM)
@@ -288,106 +291,6 @@ def compute_AoI_theory_multiple_parameter(compute_with_partial_sum = False):
             print(round((i + 1)/len(p_tx_array) * 100, 2))
 
     return mean_age_array
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-#%% Plot function
-
-def get_plot_config():
-    config = dict(
-        # - - - - - - - - - - - - -
-        # Common parameters
-        figsize = (15, 10),
-        fontsize = 28,
-        save_fig = False,
-        # - - - - - - - - - - - - -
-        # Parameters for aoi surface
-        use_imshow = False,
-        levels_countourf = 20,
-        add_color_bar = True,
-        # - - - - - - - - - - - - -
-        # Parameters for aoi vs N
-        labels = ["p = {}".format(p) for p in [0.005, 0.01, 0.02, 0.05]],
-        idx_to_plot = [(i, 1) for i in range(4) ],
-        linestyle = ['solid', 'dotted', 'dashed', 'dashdot']
-    )
-
-    return config
-
-def plot_AoI_surface(p_tx_array, alpha_array, mean_age_surface):
-    # Get config and check them
-    config = get_plot_config()
-    if 'save_fig' not in config: config['save_fig'] = False
-    if 'levels_countourf' not in config: config['levels_countourf'] = 10
-    if 'add_color_bar' not in config: config['add_color_bar'] = True
-
-    fig, ax = plt.subplots(figsize = config['figsize'])
-    plt.rcParams.update({'font.size': config['fontsize']})
-
-    if config['use_imshow']:
-        # extent = [xmin,xmax,ymin,ymax]
-        extent = [p_tx_array[0], p_tx_array[-1], alpha_array[0], alpha_array[-1]]
-
-        cs = ax.imshow(mean_age_surface, extent = extent, interpolation='nearest', aspect='auto')
-        # ax.set_xticks(p_tx_array)
-        # ax.set_yticks(alpha_array)
-    else:
-        cs = ax.contourf(p_tx_array, alpha_array, mean_age_surface, levels = 20)
-    
-        ax.set_yscale('log')
-        ax.set_xscale('log')
-
-    if config['add_color_bar']:
-        cbar = fig.colorbar(cs)
-
-    ax.set_xlabel('Transmission probability p')
-    ax.set_ylabel('Probability $q$ of a useful update from a neighbor')
-
-    cbar.ax.set_ylabel('Average AoI')
-    
-    fig.tight_layout()
-    plt.tight_layout()
-
-    if config['save_fig']:
-        N = 10
-        type_aoi = 'theory'
-        name = "aoi_surface_N{}_{}".format(N, type_aoi)
-
-        file_type = 'png'
-        filename = "{}.{}".format(name, file_type)
-        plt.savefig(filename, format=file_type)
-
-        file_type = 'eps'
-        filename = "{}.{}".format(name, file_type)
-        plt.savefig(filename, format=file_type)
-
-    plt.show()
-
-
-def plot_aoi_vs_N(N_array, aoi_array):
-    config = get_plot_config()
-    
-    fig, ax = plt.subplots(1, 1, figsize = (15, 10)) 
-    plt.rcParams.update({'font.size': config['fontsize']})
-    
-    for i in range(len(config['idx_to_plot'])):
-        tmp_idx = config['idx_to_plot'][i]
-        
-        ax.plot(N_array, aoi_array[tmp_idx[0], tmp_idx[1], :], 
-                label = config['labels'][i], linestyle = config['linestyle'][i], linewidth = 2.5)
-
-    ax.legend()
-    
-    ax.set_xlabel("Number of neighbors")
-    ax.set_ylabel("AoI")
-    ax.grid(True)
-
-    ax.set_xlim([N_array[0], N_array[-1]])
-    ax.set_yscale('log')
-
-    fig.tight_layout()
-    plt.tight_layout()
-
-    plt.show()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 #%% Main function
