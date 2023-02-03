@@ -122,6 +122,89 @@ def plot_aoi_vs_N(N_array, aoi_array):
     plt.show()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Plot AoI Evolution
+
+def plot_aoi_evolution_TDMA(aoi):
+    """
+    Function that create the typical figure of AoI evolution presents in various paper (the plot with a sawtooth trend)
+    
+    The AoI input must be a vector where each value represents the AoI in that specific temporal moment
+    E.g. aoi = [0,1,2,3,0,1,0,1,2,3,4,5,6,7,0,1, ....]
+    """
+
+    config = dict(
+        figsize = (15, 10),
+        fontsize = 18,
+        x_limit = 30, # Points to plot (i.e. simulation step)
+        y_limit = 10,
+        linewidth = 2,
+        N = 4, # Number of sensors
+    )
+    
+    # Create ticks for the grid
+    # Major ticks every N, minor ticks every 1
+    major_ticks = np.arange(0, config['x_limit'], 1)
+    minor_ticks = np.arange(0, config['x_limit'], 1) + 0.5
+
+    
+    t = np.arange(aoi.shape[0])
+    aoi_correct = aoi
+    # aoi_correct, t = correct_aoi_for_evolution_plot(aoi)
+
+    plt.rcParams.update({'font.size': config['fontsize']})
+    
+    fig, ax = plt.subplots(1, 1, figsize = config['figsize'])
+    
+    ax.plot(t, aoi_correct)
+
+    ax.set_xticks(major_ticks)
+    ax.set_xticks(minor_ticks, minor=True)
+    ax.grid(True)
+    
+    ax.set_xlim([0, config['x_limit']])
+    ax.set_ylim([0, config['y_limit']])
+    
+    x_ticks_labels = get_xticks_labels(config['N'], len(minor_ticks))
+    print(x_ticks_labels)
+    ax.set_xticklabels('')
+    ax.set_xticklabels(x_ticks_labels, minor = True)
+    ax.set_xlabel("Time [Units of time]")
+    ax.set_ylabel("AoI")
+
+    fig.tight_layout()
+    plt.show()
+
+def  correct_aoi_for_evolution_plot(aoi, epsilon = 0.00001):
+    """
+    Since matplotlib connect the points of a plot through direct line if the AoI go to zero I normaly obtain a diagon line that go 
+    """
+
+    t = [0]
+    new_aoi = []
+
+    for i in range(1, len(aoi)):
+        current_aoi = aoi[i]
+        
+        if current_aoi == 0:
+            t.append(i - 1 + epsilon)
+            new_aoi.append(0)
+
+        t.append(i)
+        new_aoi.append(current_aoi)
+
+def get_xticks_labels(N, L):
+    j = 65
+    labels = []
+    for i in range(L):
+        labels.append(chr(j))
+
+        j+= 1
+
+        if j - 65 >= N: j = 65
+    
+    return labels
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 # Function to check/rewrite
 
 def plot_old_1(alpha, c):
