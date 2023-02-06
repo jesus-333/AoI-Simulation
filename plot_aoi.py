@@ -133,56 +133,81 @@ def plot_aoi_evolution_TDMA(aoi):
     """
 
     config = dict(
-        figsize = (15, 10),
+        figsize = (15, 6),
         fontsize = 18,
-        x_limit = 30, # Points to plot (i.e. simulation step)
+        x_limit = 32, # Points to plot (i.e. simulation step)
         y_limit = 10,
-        linewidth = 2,
+        linewidth = 1.7,
         N = 4, # Number of sensors
     )
     
-    # Create ticks for the grid
-    # Major ticks every N, minor ticks every 1
-    major_ticks = np.arange(0, config['x_limit'], 1)
-    minor_ticks = np.arange(0, config['x_limit'], 1) + 0.5
-
+    # Create ticks for the grid and labels
+    major_x_ticks = np.arange(0, config['x_limit'], 1)
+    minor_x_ticks = np.arange(0, config['x_limit'], 1) + 0.5
+    major_y_ticks = np.arange(0, config['y_limit'], 1)
     
-    t = np.arange(aoi.shape[0])
-    aoi_correct = aoi
-    # aoi_correct, t = correct_aoi_for_evolution_plot(aoi)
+    # Correct AoI
+    aoi_correct = []
+    t_array = []
+    for i in range(aoi.shape[1]):
+        tmp_aoi_correct, t = correct_aoi_for_evolution_plot(aoi[:, i])
+        
+        aoi_correct.append(np.asarray(tmp_aoi_correct))
+        t_array.append(t)
+    
+    # Find point where AoI was reset
+    reset_all_list, reset_single_list = check_aoi_for_reset(aoi, config['x_limit'])
 
     plt.rcParams.update({'font.size': config['fontsize']})
     
     fig, ax = plt.subplots(1, 1, figsize = config['figsize'])
     
-    ax.plot(t, aoi_correct)
+    for i in range(int(config['x_limit'] / config['N'])):
+        ax.axvline(i * config['N'], color = 'black', alpha = 0.5)
+    
+    shift = 0.025
+    for i in range(aoi.shape[1]):
+        ax.plot(t_array[i], aoi_correct[i] + shift, 
+                linewidth = config['linewidth'], label = "Sensor {}".format(i + 1))
+        shift += shift
 
-    ax.set_xticks(major_ticks)
-    ax.set_xticks(minor_ticks, minor=True)
+    ax.set_xticks(major_x_ticks)
+    ax.set_yticks(major_y_ticks)
+    ax.set_xticks(minor_x_ticks, minor=True)
     ax.grid(True)
+    ax.legend()
     
     ax.set_xlim([0, config['x_limit']])
     ax.set_ylim([0, config['y_limit']])
+
     
-    x_ticks_labels = get_xticks_labels(config['N'], len(minor_ticks))
+    x_ticks_labels = get_xticks_labels(config['N'], len(minor_x_ticks))
     print(x_ticks_labels)
     ax.set_xticklabels('')
     ax.set_xticklabels(x_ticks_labels, minor = True)
     ax.set_xlabel("Time [Units of time]")
     ax.set_ylabel("AoI")
+    
+    for point in reset_all_list:
+        x, y = point
+        ax.scatter(x, y, marker = 'o', color = 'black', linewidths = 5)
+
+    # for point in reset_single_list:
+    #     x, y = point
+    #     ax.scatter(x, y, marker = 'o')
 
     fig.tight_layout()
     plt.show()
 
-def  correct_aoi_for_evolution_plot(aoi, epsilon = 0.00001):
+def correct_aoi_for_evolution_plot(aoi, epsilon = 0.00001):
     """
     Since matplotlib connect the points of a plot through direct line if the AoI go to zero I normaly obtain a diagon line that go 
     """
 
-    t = [0]
+    t = []
     new_aoi = []
 
-    for i in range(1, len(aoi)):
+    for i in range(0, len(aoi)):
         current_aoi = aoi[i]
         
         if current_aoi == 0:
@@ -191,6 +216,33 @@ def  correct_aoi_for_evolution_plot(aoi, epsilon = 0.00001):
 
         t.append(i)
         new_aoi.append(current_aoi)
+
+    return new_aoi, t
+
+def check_aoi_for_reset(aoi, T_limit = -1):
+    """
+    aoi = array of shape (T, N) obtained with the simulation in the TDMA file. T = Number of simulation steps, N = numbers of sensors
+
+    Create a list containing the momement where the AoI is reset.
+    The list are set of points to be plot in the AoI figure through the scatter function
+    """
+    
+    reset_all_list = []
+    reset_single_list = []
+
+    if T_limit <= 0: n_samples = aoi.shape[0]
+    else: n_samples = T_limit
+
+    for i in range(n_samples):
+        if aoi[i].sum() == 0: # If the sum of the row is zero they must be all zero so the AoI was reset through the help factor 
+            reset_all_list.append([i - 1, aoi[i - 1, i % aoi.shape[1]]]) 
+        elif (aoi[i] == 0).sum() > 0: # Check if there is at least 1 zero (i.e. at least 1 sensor resets its aoi)
+            for j in range(len(aoi[i])):
+                if aoi[i, j] == 0:
+                    reset_single_list.append([i, 0])
+
+    return reset_all_list, reset_single_list
+
 
 def get_xticks_labels(N, L):
     j = 65
