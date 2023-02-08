@@ -133,13 +133,14 @@ def plot_aoi_evolution_TDMA(aoi):
     """
 
     config = dict(
-        figsize = (16, 10),
-        fontsize = 10,
-        x_limit = 32, # Points to plot (i.e. simulation step)
+        figsize = (12, 8),
+        fontsize = 15,
+        x_limit = 20, # Points to plot (i.e. simulation step)
         y_limit = 10,
         linewidth = 1.7,
         N = aoi.shape[1], # Number of sensors
         plot_type = 1,
+        label_setted_for_reset = False # NOT MODIFY
     )
     
     # Create ticks for the grid and labels
@@ -162,6 +163,7 @@ def plot_aoi_evolution_TDMA(aoi):
     
     # Find point where AoI was reset
     reset_all_list, reset_single_list = check_aoi_for_reset(aoi, config['x_limit'])
+    color_list = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
     plt.rcParams.update({'font.size': config['fontsize']})
     
@@ -171,7 +173,9 @@ def plot_aoi_evolution_TDMA(aoi):
 
         i = 0
         for ax in ax_array.flatten():
-            config['label'] = config_ticks['x_ticks_labels'][i]
+            config['title'] = config_ticks['x_ticks_labels'][i]
+            config['label'] = 'AoI'
+            config['color'] = color_list[i]
 
             plot_aoi_evolution(ax, t_array[i], aoi_correct[i], reset_all_list, config, config_ticks)
             fig.tight_layout()
@@ -180,7 +184,9 @@ def plot_aoi_evolution_TDMA(aoi):
     elif config['plot_type'] == 1: # Plot in 4 different plot and different figure
         for i in range(aoi.shape[1]):
             fig, ax = plt.subplots(1, 1, figsize = config['figsize'])
-            config['label'] = config_ticks['x_ticks_labels'][i]
+            config['title'] = config_ticks['x_ticks_labels'][i]
+            config['label'] = 'AoI'
+            config['color'] = color_list[i]
 
             plot_aoi_evolution(ax, t_array[i], aoi_correct[i], reset_all_list, config, config_ticks)
             fig.tight_layout()
@@ -188,7 +194,10 @@ def plot_aoi_evolution_TDMA(aoi):
     elif config['plot_type'] == 2: # Plot in same plot and same figure
         fig, ax = plt.subplots(1, 1, figsize = config['figsize'])
         for i in range(aoi.shape[1]):
-            config['label'] = config_ticks['x_ticks_labels'][i]
+            config['title'] = config_ticks['x_ticks_labels'][i]
+            config['label'] = 'AoI Sensor {}'.format(config_ticks['x_ticks_labels'][i])
+            config['color'] = color_list[i]
+            config['label_setted_for_reset'] = True if i != aoi.shape[1] - 1 else False
 
             plot_aoi_evolution(ax, t_array[i], aoi_correct[i], reset_all_list, config, config_ticks)
             fig.tight_layout()
@@ -201,35 +210,37 @@ def plot_aoi_evolution(ax, t_array, aoi, reset_all_list, config, config_ticks):
     for i in range(int(config['x_limit'] / config['N'])):
         ax.axvline(i * config['N'], color = 'black', alpha = 0.5)
     
-    ax.plot(t_array, aoi, linewidth = config['linewidth'], label = "Sensor {}".format(config['label']))
+    ax.plot(t_array, aoi, 
+            linewidth = config['linewidth'], color = config['color'],
+            label = config['label']
+            )
     
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
+
     ax.set_yticks(config_ticks['major_y_ticks'])
     ax.set_xticks(config_ticks['major_x_ticks'])
     ax.set_xticks(config_ticks['minor_x_ticks'], minor = True)
     # ax.set_xticklabels(config_ticks['x_ticks_labels'], minor = True)
     # ax.tick_params(axis = 'x', which = 'minor',  labelsize = config_ticks['minor_x_ticks_fontsize'])
     
-    
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
     ax.set_xlim([0, config['x_limit']])
     ax.set_ylim([0, config['y_limit']])
 
-
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
     ax.set_xlabel("Time [Units of time]")
     ax.set_ylabel("AoI")
-    
-    label_setted = False
+    ax.set_title("Sensor {}".format(config['title']))
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
+    # Plot point where the AoI was reset through correlation
     for point in reset_all_list:
         x, y = point
-
-        label = '' if label_setted else 'Correlation reset'
-
+        label = '' if config['label_setted_for_reset']  else 'Correlation reset'
         ax.scatter(x, y, marker = 'o', color = 'black', linewidths = 5, label = label)
-        label_setted = True
+        config['label_setted_for_reset'] = True
 
-    # for point in reset_single_list:
-    #     x, y = point
-    #     ax.scatter(x, y, marker = 'o')
-    
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
     ax.grid(True)
     ax.legend()
 
