@@ -133,19 +133,24 @@ def plot_aoi_evolution_TDMA(aoi):
     """
 
     config = dict(
-        figsize = (15, 6),
-        fontsize = 18,
+        figsize = (16, 10),
+        fontsize = 10,
         x_limit = 32, # Points to plot (i.e. simulation step)
         y_limit = 10,
         linewidth = 1.7,
-        N = 4, # Number of sensors
+        N = aoi.shape[1], # Number of sensors
+        plot_type = 1,
     )
     
     # Create ticks for the grid and labels
-    major_x_ticks = np.arange(0, config['x_limit'], 1)
-    minor_x_ticks = np.arange(0, config['x_limit'], 1) + 0.5
-    major_y_ticks = np.arange(0, config['y_limit'], 1)
-    
+    config_ticks = dict(
+        major_x_ticks = np.arange(0, config['x_limit'] + 1, 1),
+        minor_x_ticks = np.arange(0, config['x_limit'] + 1, 1) + 0.5,
+        major_y_ticks = np.arange(0, config['y_limit'], 1),
+        minor_x_ticks_fontsize = 8,
+    )
+    config_ticks['x_ticks_labels'] = get_xticks_labels(config['N'], len(config_ticks['minor_x_ticks']))
+
     # Correct AoI
     aoi_correct = []
     t_array = []
@@ -160,44 +165,73 @@ def plot_aoi_evolution_TDMA(aoi):
 
     plt.rcParams.update({'font.size': config['fontsize']})
     
-    fig, ax = plt.subplots(1, 1, figsize = config['figsize'])
+    if config['plot_type'] == 0: # Plot in 4 different plot and same figure
+        n_figure_row = n_figure_column = int(np.ceil(np.sqrt(config['N'])))
+        fig, ax_array = plt.subplots(n_figure_row, n_figure_column, figsize = config['figsize'])
+
+        i = 0
+        for ax in ax_array.flatten():
+            config['label'] = config_ticks['x_ticks_labels'][i]
+
+            plot_aoi_evolution(ax, t_array[i], aoi_correct[i], reset_all_list, config, config_ticks)
+            fig.tight_layout()
+            i += 1
+
+    elif config['plot_type'] == 1: # Plot in 4 different plot and different figure
+        for i in range(aoi.shape[1]):
+            fig, ax = plt.subplots(1, 1, figsize = config['figsize'])
+            config['label'] = config_ticks['x_ticks_labels'][i]
+
+            plot_aoi_evolution(ax, t_array[i], aoi_correct[i], reset_all_list, config, config_ticks)
+            fig.tight_layout()
     
+    elif config['plot_type'] == 2: # Plot in same plot and same figure
+        fig, ax = plt.subplots(1, 1, figsize = config['figsize'])
+        for i in range(aoi.shape[1]):
+            config['label'] = config_ticks['x_ticks_labels'][i]
+
+            plot_aoi_evolution(ax, t_array[i], aoi_correct[i], reset_all_list, config, config_ticks)
+            fig.tight_layout()
+
+    else: raise ValueError("config['plot_type'] must have value 0 or 1 or 2")
+
+    plt.show()
+
+def plot_aoi_evolution(ax, t_array, aoi, reset_all_list, config, config_ticks):
     for i in range(int(config['x_limit'] / config['N'])):
         ax.axvline(i * config['N'], color = 'black', alpha = 0.5)
     
-    shift = 0.025
-    for i in range(aoi.shape[1]):
-        ax.plot(t_array[i], aoi_correct[i] + shift, 
-                linewidth = config['linewidth'], label = "Sensor {}".format(i + 1))
-        shift += shift
-
-    ax.set_xticks(major_x_ticks)
-    ax.set_yticks(major_y_ticks)
-    ax.set_xticks(minor_x_ticks, minor=True)
-    ax.grid(True)
-    ax.legend()
+    ax.plot(t_array, aoi, linewidth = config['linewidth'], label = "Sensor {}".format(config['label']))
+    
+    ax.set_yticks(config_ticks['major_y_ticks'])
+    ax.set_xticks(config_ticks['major_x_ticks'])
+    ax.set_xticks(config_ticks['minor_x_ticks'], minor = True)
+    # ax.set_xticklabels(config_ticks['x_ticks_labels'], minor = True)
+    # ax.tick_params(axis = 'x', which = 'minor',  labelsize = config_ticks['minor_x_ticks_fontsize'])
+    
     
     ax.set_xlim([0, config['x_limit']])
     ax.set_ylim([0, config['y_limit']])
 
-    
-    x_ticks_labels = get_xticks_labels(config['N'], len(minor_x_ticks))
-    print(x_ticks_labels)
-    ax.set_xticklabels('')
-    ax.set_xticklabels(x_ticks_labels, minor = True)
+
     ax.set_xlabel("Time [Units of time]")
     ax.set_ylabel("AoI")
     
+    label_setted = False
     for point in reset_all_list:
         x, y = point
-        ax.scatter(x, y, marker = 'o', color = 'black', linewidths = 5)
+
+        label = '' if label_setted else 'Correlation reset'
+
+        ax.scatter(x, y, marker = 'o', color = 'black', linewidths = 5, label = label)
+        label_setted = True
 
     # for point in reset_single_list:
     #     x, y = point
     #     ax.scatter(x, y, marker = 'o')
-
-    fig.tight_layout()
-    plt.show()
+    
+    ax.grid(True)
+    ax.legend()
 
 def correct_aoi_for_evolution_plot(aoi, epsilon = 0.00001):
     """
@@ -248,7 +282,9 @@ def get_xticks_labels(N, L):
     j = 65
     labels = []
     for i in range(L):
-        labels.append(chr(j))
+        tick_string = "({})".format(chr(j))
+        tick_string = chr(j)
+        labels.append(tick_string)
 
         j+= 1
 
