@@ -133,14 +133,15 @@ def plot_aoi_evolution_TDMA(aoi):
     """
 
     config = dict(
-        figsize = (12, 8),
+        figsize = (10, 6),
         fontsize = 15,
         x_limit = 20, # Points to plot (i.e. simulation step)
         y_limit = 10,
         linewidth = 1.7,
         N = aoi.shape[1], # Number of sensors
         plot_type = 1,
-        label_setted_for_reset = False # NOT MODIFY
+        label_setted_for_reset_correlation = False, # NOT MODIFY
+        label_setted_for_reset_tx = False,          # NOT MODIFY
     )
     
     # Create ticks for the grid and labels
@@ -164,6 +165,7 @@ def plot_aoi_evolution_TDMA(aoi):
     # Find point where AoI was reset
     reset_all_list, reset_single_list = check_aoi_for_reset(aoi, config['x_limit'])
     color_list = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    color_list = ['black' for i in range(aoi.shape[1])]
 
     plt.rcParams.update({'font.size': config['fontsize']})
     
@@ -176,8 +178,9 @@ def plot_aoi_evolution_TDMA(aoi):
             config['title'] = config_ticks['x_ticks_labels'][i]
             config['label'] = 'AoI'
             config['color'] = color_list[i]
+            reset_list = [reset_all_list, reset_single_list[i]]
 
-            plot_aoi_evolution(ax, t_array[i], aoi_correct[i], reset_all_list, config, config_ticks)
+            plot_aoi_evolution(ax, t_array[i], aoi_correct[i], reset_list, config, config_ticks)
             fig.tight_layout()
             i += 1
 
@@ -185,10 +188,13 @@ def plot_aoi_evolution_TDMA(aoi):
         for i in range(aoi.shape[1]):
             fig, ax = plt.subplots(1, 1, figsize = config['figsize'])
             config['title'] = config_ticks['x_ticks_labels'][i]
-            config['label'] = 'AoI'
+            config['label'] = ''
             config['color'] = color_list[i]
+            config['label_setted_for_reset_correlation'] = False
+            config['label_setted_for_reset_tx']          = False
+            reset_list = [reset_all_list, reset_single_list[i]]
 
-            plot_aoi_evolution(ax, t_array[i], aoi_correct[i], reset_all_list, config, config_ticks)
+            plot_aoi_evolution(ax, t_array[i], aoi_correct[i], reset_list, config, config_ticks)
             fig.tight_layout()
     
     elif config['plot_type'] == 2: # Plot in same plot and same figure
@@ -197,16 +203,24 @@ def plot_aoi_evolution_TDMA(aoi):
             config['title'] = config_ticks['x_ticks_labels'][i]
             config['label'] = 'AoI Sensor {}'.format(config_ticks['x_ticks_labels'][i])
             config['color'] = color_list[i]
-            config['label_setted_for_reset'] = True if i != aoi.shape[1] - 1 else False
+            config['label_setted_for_reset_correlation'] = True if i != aoi.shape[1] - 1 else False
+            config['label_setted_for_reset_tx']          = True if i != aoi.shape[1] - 1 else False
+            reset_list = [reset_all_list, reset_single_list] # TODO CORRECT
 
-            plot_aoi_evolution(ax, t_array[i], aoi_correct[i], reset_all_list, config, config_ticks)
+            plot_aoi_evolution(ax, t_array[i], aoi_correct[i], reset_list, config, config_ticks)
             fig.tight_layout()
 
     else: raise ValueError("config['plot_type'] must have value 0 or 1 or 2")
+    
+    # Plot Transmission bar
+    plot_bar_transmission(reset_all_list, reset_single_list, config, config_ticks)
 
     plt.show()
 
-def plot_aoi_evolution(ax, t_array, aoi, reset_all_list, config, config_ticks):
+def plot_aoi_evolution(ax, t_array, aoi, reset_list, config, config_ticks):
+    reset_all_list = reset_list[0]
+    reset_single_list = reset_list[1]
+
     for i in range(int(config['x_limit'] / config['N'])):
         ax.axvline(i * config['N'], color = 'black', alpha = 0.5)
     
@@ -233,16 +247,54 @@ def plot_aoi_evolution(ax, t_array, aoi, reset_all_list, config, config_ticks):
     ax.set_title("Sensor {}".format(config['title']))
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
-    # Plot point where the AoI was reset through correlation
+    # Plot point where AoI was reset
+
+    # Through correlation
     for point in reset_all_list:
         x, y = point
-        label = '' if config['label_setted_for_reset']  else 'Correlation reset'
-        ax.scatter(x, y, marker = 'o', color = 'black', linewidths = 5, label = label)
-        config['label_setted_for_reset'] = True
+        label = '' if config['label_setted_for_reset_correlation']  else 'Correlation reset'
+        ax.scatter(x, y, marker = 'o', color = 'green', linewidths = 3, label = label, s = 20)
+        config['label_setted_for_reset_correlation'] = True
+
+    # Through Transmission
+    for point in reset_single_list:
+        x, y = point
+        label = '' if config['label_setted_for_reset_tx']  else 'Transmission reset'
+        ax.scatter(x, y, marker = 'o', linewidths = 2, label = label, facecolors='none', edgecolors = 'red', s = 60)
+        config['label_setted_for_reset_tx'] = True
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
     ax.grid(True)
     ax.legend()
+
+def plot_bar_transmission(reset_all_list, reset_single_list, config, config_ticks):
+    fig, ax = plt.subplots(1, 1, figsize = (10, 1))
+
+    ax.set_yticks(config_ticks['major_y_ticks'])
+    ax.set_yticklabels('')
+    ax.set_xticks(config_ticks['major_x_ticks'])
+    
+    ax.grid(True)
+
+    ax.set_ylim([0, 1])
+    ax.set_xlim([0, config['x_limit']])
+    
+    for point in reset_all_list:
+        x, y = point
+        y = 0.5
+        ax.scatter(x, y, marker = 'o', color = 'green', linewidths = 3, s = 60)
+    
+    for i in range(len(reset_single_list)):
+        tmp_list = reset_single_list[i]
+        for point in tmp_list:
+            x, y = point
+            y = 0.5
+            x += 0.05
+
+            marker = "$" + chr(65 + i) + "$"
+            ax.scatter(x, y, marker = marker, linewidths = 1, edgecolors = 'black', s = 50)
+
+    fig.tight_layout()
 
 def correct_aoi_for_evolution_plot(aoi, epsilon = 0.00001):
     """
@@ -273,7 +325,7 @@ def check_aoi_for_reset(aoi, T_limit = -1):
     """
     
     reset_all_list = []
-    reset_single_list = []
+    reset_single_list = [[] for i in range(aoi.shape[1])]
 
     if T_limit <= 0: n_samples = aoi.shape[0]
     else: n_samples = T_limit
@@ -281,10 +333,12 @@ def check_aoi_for_reset(aoi, T_limit = -1):
     for i in range(n_samples):
         if aoi[i].sum() == 0: # If the sum of the row is zero they must be all zero so the AoI was reset through the help factor 
             reset_all_list.append([i - 1, aoi[i - 1, i % aoi.shape[1]]]) 
+            reset_single_list[i % aoi.shape[1]].append([i - 1, aoi[i - 1, i % aoi.shape[1]]]) 
         elif (aoi[i] == 0).sum() > 0: # Check if there is at least 1 zero (i.e. at least 1 sensor resets its aoi)
             for j in range(len(aoi[i])):
                 if aoi[i, j] == 0:
-                    reset_single_list.append([i, 0])
+                    reset_single_list[j].append([i - 1, aoi[i - 1, i % aoi.shape[1]]]) 
+                    # reset_single_list.append([i, 0])
 
     return reset_all_list, reset_single_list
 
