@@ -133,10 +133,10 @@ def plot_aoi_evolution_TDMA(aoi):
     """
 
     config = dict(
-        figsize = (10, 6),
-        fontsize = 15,
-        x_limit = 20, # Points to plot (i.e. simulation step)
-        y_limit = 10,
+        figsize = (8, 6),
+        fontsize = 18,
+        x_limit = 16, # Points to plot (i.e. simulation step)
+        y_limit = 8,
         linewidth = 1.7,
         N = aoi.shape[1], # Number of sensors
         plot_type = 1,
@@ -196,7 +196,12 @@ def plot_aoi_evolution_TDMA(aoi):
 
             plot_aoi_evolution(ax, t_array[i], aoi_correct[i], reset_list, config, config_ticks)
             fig.tight_layout()
-    
+            
+            # fig.savefig('Plot/TDMA_aoi_evolution_separated/TDMA_aoi_evolution_separated_{}.png'.format(chr(65 + i)))
+            # fig.savefig('Plot/TDMA_aoi_evolution_separated/TDMA_aoi_evolution_separated_{}.eps'.format(chr(65 + i)))
+            fig.savefig('TMP/TDMA_aoi_evolution_separated_{}.png'.format(chr(65 + i)))
+            fig.savefig('TMP/TDMA_aoi_evolution_separated_{}.eps'.format(chr(65 + i)))
+
     elif config['plot_type'] == 2: # Plot in same plot and same figure
         fig, ax = plt.subplots(1, 1, figsize = config['figsize'])
         for i in range(aoi.shape[1]):
@@ -210,6 +215,7 @@ def plot_aoi_evolution_TDMA(aoi):
             plot_aoi_evolution(ax, t_array[i], aoi_correct[i], reset_list, config, config_ticks)
             fig.tight_layout()
 
+
     else: raise ValueError("config['plot_type'] must have value 0 or 1 or 2")
     
     # Plot Transmission bar
@@ -222,7 +228,7 @@ def plot_aoi_evolution(ax, t_array, aoi, reset_list, config, config_ticks):
     reset_single_list = reset_list[1]
 
     for i in range(int(config['x_limit'] / config['N'])):
-        ax.axvline(i * config['N'], color = 'black', alpha = 0.5)
+        ax.axvline(i * config['N'], color = 'grey', alpha = 0.5)
     
     ax.plot(t_array, aoi, 
             linewidth = config['linewidth'], color = config['color'],
@@ -244,7 +250,7 @@ def plot_aoi_evolution(ax, t_array, aoi, reset_list, config, config_ticks):
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
     ax.set_xlabel("Time [Units of time]")
     ax.set_ylabel("AoI")
-    ax.set_title("Sensor {}".format(config['title']))
+    # ax.set_title("Sensor {}".format(config['title']))
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
     # Plot point where AoI was reset
@@ -253,14 +259,14 @@ def plot_aoi_evolution(ax, t_array, aoi, reset_list, config, config_ticks):
     for point in reset_all_list:
         x, y = point
         label = '' if config['label_setted_for_reset_correlation']  else 'Correlation reset'
-        ax.scatter(x, y, marker = 'o', color = 'green', linewidths = 3, label = label, s = 20)
+        ax.scatter(x, y, marker = 'o', color = 'green', linewidths = 3, label = label, s = 60)
         config['label_setted_for_reset_correlation'] = True
 
     # Through Transmission
     for point in reset_single_list:
         x, y = point
         label = '' if config['label_setted_for_reset_tx']  else 'Transmission reset'
-        ax.scatter(x, y, marker = 'o', linewidths = 2, label = label, facecolors='none', edgecolors = 'red', s = 60)
+        ax.scatter(x, y, marker = 'o', linewidths = 2, label = label, facecolors='none', edgecolors = 'red', s = 100)
         config['label_setted_for_reset_tx'] = True
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  

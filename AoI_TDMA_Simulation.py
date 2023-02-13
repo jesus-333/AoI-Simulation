@@ -112,14 +112,14 @@ def simulation_V2(N, T, initial_p_tx, alpha, increase_function):
 def get_simualtion_config():
     config = dict(
         T = 18000,
-        # p_tx_array = np.geomspace(1e-2, 0.3, 120),
-        # alpha_array = np.geomspace(1e-3, 1, 60),
+        p_tx_array = np.geomspace(1e-2, 0.3, 120),
+        alpha_array = np.geomspace(1e-3, 1, 60),
         # N_array = np.linspace(1, 60, 60),
         N_array = [4],
-        p_tx_array = [0.33],
-        alpha_array = [0.25],
+        # p_tx_array = [0.33],
+        # alpha_array = [0.25],
         print_var = True,
-        n_iterations = 500,
+        n_iterations = 5000,
     )
 
     return config
@@ -257,8 +257,8 @@ def compute_A2_closed_form(p, N, alpha):
     q = (1 - alpha * p)
     r = ((1 - p) * (q ** N))
 
-    B = (alpha * p * (1 - p) * N) / q
-    C = (q - (q ** N)) / (1 - q)
+    B = (alpha * p * (1 - p)) / q
+    C = ((q - (q ** N)) / (1 - q)) * N
     D = ( (N - 1) * (q ** (N + 1)) - (N * (q ** N)) + q) / ((1 - q) ** 2)
 
     A2 = B * (((C * r) / ((1 - r) ** 2)) + (D / (1 - r)))
