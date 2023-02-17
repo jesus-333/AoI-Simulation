@@ -111,13 +111,13 @@ def simulation_V2(N, T, initial_p_tx, alpha, increase_function):
 
 def get_simualtion_config():
     config = dict(
-        T = 18000,
-        p_tx_array = np.geomspace(1e-2, 0.3, 120),
-        alpha_array = np.geomspace(1e-3, 1, 60),
+        T = 15000,
+        # p_tx_array = np.geomspace(1e-2, 0.3, 120),
+        alpha_array = np.geomspace(1e-3, 1, 90),
         # N_array = np.linspace(1, 60, 60),
-        N_array = [4],
-        # p_tx_array = [0.33],
-        # alpha_array = [0.25],
+        N_array = [10, 30],
+        p_tx_array = [0.01, 0.05],
+        # alpha_array = [0.1],
         print_var = True,
         n_iterations = 5000,
     )
@@ -141,7 +141,7 @@ def simulate_multiple_parameters_V1():
             alpha = alpha_array[j]
             for k in range(len(N_array)):
                 N = int(N_array[k])
-
+                
                 # Compute the simulation
                 aoi_history = simulation(N, config['T'], p_tx, alpha)
                 

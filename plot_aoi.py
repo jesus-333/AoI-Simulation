@@ -36,7 +36,7 @@ def get_plot_config():
         # - - - - - - - - - - - - -
         # Parameters for aoi vs N
         labels = ["p = {}".format(p) for p in [0.005, 0.01, 0.02, 0.05]],
-        idx_to_plot = [(i, 1) for i in range(4) ],
+        idx_to_plot = [(i, 0) for i in range(4) ],
         linestyle = ['solid', 'dotted', 'dashed', 'dashdot']
     )
 
@@ -95,7 +95,7 @@ def plot_AoI_surface(p_tx_array, alpha_array, mean_age_surface):
     plt.show()
 
 
-def plot_aoi_vs_N(N_array, aoi_array):
+def plot_aoi_vs_N(N_array, aoi_array, std_array = None):
     config = get_plot_config()
     
     fig, ax = plt.subplots(1, 1, figsize = (15, 10)) 
@@ -104,8 +104,13 @@ def plot_aoi_vs_N(N_array, aoi_array):
     for i in range(len(config['idx_to_plot'])):
         tmp_idx = config['idx_to_plot'][i]
         
-        ax.plot(N_array, aoi_array[tmp_idx[0], tmp_idx[1], :], 
+        tmp_aoi = aoi_array[tmp_idx[0], tmp_idx[1], :]
+        ax.plot(N_array, tmp_aoi, 
                 label = config['labels'][i], linestyle = config['linestyle'][i], linewidth = 2.5)
+        
+        if std_array is not None:
+            tmp_std = std_array[tmp_idx[0], tmp_idx[1], :] 
+            ax.fill_between(N_array, tmp_aoi + tmp_std, tmp_aoi - tmp_std, alpha = 0.25)
 
     ax.legend()
     
@@ -117,7 +122,49 @@ def plot_aoi_vs_N(N_array, aoi_array):
     ax.set_yscale('log')
 
     fig.tight_layout()
-    plt.tight_layout()
+    fig.tight_layout()
+
+    plt.show()
+
+def plot_aoi_simulation_vs_theroy(alpha_array, aoi_array_theory, aoi_array_sim, std_array_sim = None):
+    config = get_plot_config()
+    
+    fig, ax = plt.subplots(1, 1, figsize = (15, 10)) 
+    plt.rcParams.update({'font.size': config['fontsize']})
+    
+    p_tx_array = [0.01, 0.05]
+    N_array = [10, 30]
+
+    for i in range(aoi_array_theory.shape[0]):
+        tmp_idx_1 = i
+        tmp_idx_2 = i
+        
+        tmp_label = "Closed form p = {} N = {}".format(p_tx_array[i], N_array[i])
+        tmp_aoi = aoi_array_theory[tmp_idx_1, :, tmp_idx_2]
+        ax.plot(alpha_array, tmp_aoi, 
+                label = tmp_label, linestyle = config['linestyle'][i], linewidth = 2.5)
+
+        tmp_label = "Simulation p = {} N = {}".format(p_tx_array[i], N_array[i])
+        tmp_aoi = aoi_array_sim[tmp_idx_1, :, tmp_idx_2]
+        ax.plot(alpha_array, tmp_aoi, 
+                label = tmp_label, linestyle = config['linestyle'][i + 2], linewidth = 2.5)
+        
+        if std_array_sim is not None:
+            tmp_std = std_array_sim[tmp_idx_1, :, tmp_idx_2] 
+            ax.fill_between(alpha_array, tmp_aoi + tmp_std, tmp_aoi - tmp_std, alpha = 0.25)
+
+    ax.legend()
+    
+    ax.set_xlabel("Probability $q$ of a useful update from a neighbor")
+    ax.set_ylabel("Average AoI")
+    ax.grid(True)
+
+    ax.set_xlim([alpha_array[0], alpha_array[-1]])
+    ax.set_yscale('log')
+    ax.set_xscale('log')
+
+    fig.tight_layout()
+    fig.tight_layout()
 
     plt.show()
 
