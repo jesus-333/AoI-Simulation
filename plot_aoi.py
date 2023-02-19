@@ -134,6 +134,9 @@ def plot_aoi_simulation_vs_theroy(alpha_array, aoi_array_theory, aoi_array_sim, 
     
     p_tx_array = [0.01, 0.05]
     N_array = [10, 30]
+    
+    color_closed_form = ['blue', 'black']
+    color_simulation = ['green', 'red']
 
     for i in range(aoi_array_theory.shape[0]):
         tmp_idx_1 = i
@@ -142,16 +145,16 @@ def plot_aoi_simulation_vs_theroy(alpha_array, aoi_array_theory, aoi_array_sim, 
         tmp_label = "Closed form p = {} N = {}".format(p_tx_array[i], N_array[i])
         tmp_aoi = aoi_array_theory[tmp_idx_1, :, tmp_idx_2]
         ax.plot(alpha_array, tmp_aoi, 
-                label = tmp_label, linestyle = config['linestyle'][i], linewidth = 2.5)
+                label = tmp_label, linestyle = config['linestyle'][i], linewidth = 2.5, color = color_closed_form[i])
 
         tmp_label = "Simulation p = {} N = {}".format(p_tx_array[i], N_array[i])
         tmp_aoi = aoi_array_sim[tmp_idx_1, :, tmp_idx_2]
         ax.plot(alpha_array, tmp_aoi, 
-                label = tmp_label, linestyle = config['linestyle'][i + 2], linewidth = 2.5)
+                label = tmp_label, linestyle = config['linestyle'][i + 2], linewidth = 2.5, color = color_simulation[i])
         
         if std_array_sim is not None:
             tmp_std = std_array_sim[tmp_idx_1, :, tmp_idx_2] 
-            ax.fill_between(alpha_array, tmp_aoi + tmp_std, tmp_aoi - tmp_std, alpha = 0.25)
+            ax.fill_between(alpha_array, tmp_aoi + tmp_std, tmp_aoi - tmp_std, alpha = 0.25, color = color_simulation[i])
 
     ax.legend()
     
