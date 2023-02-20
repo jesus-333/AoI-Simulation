@@ -105,17 +105,20 @@ def plot_aoi_vs_N(N_array, aoi_array, std_array = None):
         tmp_idx = config['idx_to_plot'][i]
         
         tmp_aoi = aoi_array[tmp_idx[0], tmp_idx[1], :]
+        tmp_label = config['labels'][i] + " (mean)"
         ax.plot(N_array, tmp_aoi, 
-                label = config['labels'][i], linestyle = config['linestyle'][i], linewidth = 2.5)
+                label = tmp_label, linestyle = config['linestyle'][i], linewidth = 2.5)
         
         if std_array is not None:
+            tmp_label = config['labels'][i] + " (std)"
             tmp_std = std_array[tmp_idx[0], tmp_idx[1], :] 
-            ax.fill_between(N_array, tmp_aoi + tmp_std, tmp_aoi - tmp_std, alpha = 0.25)
+            ax.fill_between(N_array, tmp_aoi + tmp_std, tmp_aoi - tmp_std, 
+                            label = tmp_label, alpha = 0.25)
 
-    ax.legend()
+    ax.legend(ncol = 2)
     
     ax.set_xlabel("Number of neighbors")
-    ax.set_ylabel("AoI")
+    ax.set_ylabel("Average AoI")
     ax.grid(True)
 
     ax.set_xlim([N_array[0], N_array[-1]])
@@ -147,14 +150,16 @@ def plot_aoi_simulation_vs_theroy(alpha_array, aoi_array_theory, aoi_array_sim, 
         ax.plot(alpha_array, tmp_aoi, 
                 label = tmp_label, linestyle = config['linestyle'][i], linewidth = 2.5, color = color_closed_form[i])
 
-        tmp_label = "Simulation p = {} N = {}".format(p_tx_array[i], N_array[i])
+        tmp_label = "Simulation p = {} N = {} (mean)".format(p_tx_array[i], N_array[i])
         tmp_aoi = aoi_array_sim[tmp_idx_1, :, tmp_idx_2]
         ax.plot(alpha_array, tmp_aoi, 
                 label = tmp_label, linestyle = config['linestyle'][i + 2], linewidth = 2.5, color = color_simulation[i])
         
         if std_array_sim is not None:
+            tmp_label = "Simulation p = {} N = {} (std)".format(p_tx_array[i], N_array[i])
             tmp_std = std_array_sim[tmp_idx_1, :, tmp_idx_2] 
-            ax.fill_between(alpha_array, tmp_aoi + tmp_std, tmp_aoi - tmp_std, alpha = 0.25, color = color_simulation[i])
+            ax.fill_between(alpha_array, tmp_aoi + tmp_std, tmp_aoi - tmp_std, 
+                            label = tmp_label, alpha = 0.25, color = color_simulation[i])
 
     ax.legend()
     
@@ -416,20 +421,29 @@ def get_xticks_labels(N, L):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 # Function to check/rewrite
 
-def plot_old_1(alpha, c):
+def plot_old_1(alpha, c, std):
     plt.figure(figsize = (15, 10))
-    plt.plot(alpha, c[0, :, 0], label = "p = 0.01  N = 10", linestyle = 'solid')
-    plt.plot(alpha, c[0, :, 1], label = "p = 0.01  N = 30", linestyle = 'dashed')
-    plt.plot(alpha, c[1, :, 0], label = "p = 0.05  N = 10", linestyle = 'dotted')
-    plt.plot(alpha, c[1, :, 1], label = "p = 0.05  N = 30", linestyle = 'dashdot')
+    plt.plot(alpha, c[0, :, 0], label = "p = 0.01  N = 10 (mean)", linestyle = 'solid')
+    plt.plot(alpha, c[0, :, 1], label = "p = 0.01  N = 30 (mean)", linestyle = 'dashed')
+    plt.plot(alpha, c[1, :, 0], label = "p = 0.05  N = 10 (mean)", linestyle = 'dotted')
+    plt.plot(alpha, c[1, :, 1], label = "p = 0.05  N = 30 (mean)", linestyle = 'dashdot')
+    
+    tmp_label = "p = 0.01  n = 10 (std)"
+    plt.fill_between(alpha, c[0, :, 0] + std[0, :, 0], c[0, :, 0] - std[0, :, 0], label = tmp_label, alpha = 0.25)
+    tmp_label = "p = 0.01  n = 30 (std)"
+    plt.fill_between(alpha, c[0, :, 1] + std[0, :, 1], c[0, :, 1] - std[0, :, 1], label = tmp_label, alpha = 0.25)
+    tmp_label = "p = 0.05  n = 10 (std)"
+    plt.fill_between(alpha, c[1, :, 0] + std[1, :, 0], c[1, :, 0] - std[1, :, 0], label = tmp_label, alpha = 0.25)
+    tmp_label = "p = 0.05  n = 30 (std)"
+    plt.fill_between(alpha, c[1, :, 1] + std[1, :, 1], c[1, :, 1] - std[1, :, 1], label = tmp_label, alpha = 0.25)
 
-    plt.legend()
+    plt.legend(ncol = 2, fontsize = 20)
     plt.yscale('log')
     plt.xscale('log')
     plt.xlim([1e-3, 1])
     plt.grid(True)
     plt.xlabel('Probability $q$ of a useful update from a neighbor')
-    plt.ylabel('AoI')
+    plt.ylabel('Average AoI')
     plt.title('AoI vs $q$ TDMA Simulation')
     plt.show()
 
