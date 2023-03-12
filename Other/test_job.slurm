@@ -6,10 +6,10 @@
 #SBATCH --mail-user albi25.zanca@gmail.com
 #SBATCH --mail-type END,FAIL
 
-#SBATCH --ntasks 3
+#SBATCH --ntasks 16
 #SBATCH --partition allgroups
 #SBATCH --time 5:00
-#SBATCH --mem 1G
+#SBATCH --mem 2G
 
 cd $SLURM_SUBMIT_DIR
 
