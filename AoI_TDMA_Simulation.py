@@ -382,8 +382,11 @@ def test_simulation(multiprocess = False):
 
 
 def main():
-    pass
+    print("Test simulation with single core")
+    test_simulation(False)
 
+    print("Test simulation with multiprocess library")
+    test_simulation(True)
 
 if __name__ == "__main__":
     main()
