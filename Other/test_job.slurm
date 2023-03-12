@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #SBATCH --job-name test_jesus
-#SBATCH --output output_%j.txt
-#SBATCH --error errors_%j.txt
+#SBATCH --output Other/output_%j.txt
+#SBATCH --error Other/errors_%j.txt
 #SBATCH --mail-user albi25.zanca@gmail.com
 #SBATCH --mail-type END,FAIL
 
@@ -15,4 +15,4 @@ cd $SLURM_SUBMIT_DIR
 
 ls -la
 
-srun python AoI_TDMA_simulation.py
+srun python AoI_TDMA_Simulation.py
