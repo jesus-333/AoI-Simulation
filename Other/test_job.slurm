@@ -15,4 +15,4 @@ cd $SLURM_SUBMIT_DIR
 
 ls -la
 
-srun python AoI_TDMA_Simulation.py
+srun singularity exec library://jesus-333/collection/base_conda_numba python AoI_TDMA_Simulation.py
