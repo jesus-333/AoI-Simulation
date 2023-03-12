@@ -11,7 +11,9 @@ The simulation is used to track the AoI of the various sensors
 
 import numpy as np
 import matplotlib.pyplot as plt
-
+import time
+import multiprocessing as mp
+from numba import jit, prange
 
 """
 %load_ext autoreload
@@ -22,6 +24,7 @@ import matplotlib.pyplot as plt
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 #%% Simulation function
 
+@jit(nopython = True, parallel = True)
 def simulation(N, T, p_tx, alpha):
     """
     Simple simulation where each sensor can transmit only during its turn according to a transmission probability
@@ -33,13 +36,13 @@ def simulation(N, T, p_tx, alpha):
     """
 
     current_age = np.zeros(N)
-    age_list = []
+    age_list = np.zeros((N, T))
     idx_tx = 0
 
     # if type(p_tx) == float: p_tx = np.ones(N) * p_tx
     p_tx = np.ones(N) * p_tx
 
-    for t in range(T):
+    for t in prange(T):
         current_age += 1
 
         # Reset the AoI of the sensor IF do the transmission during its turn
@@ -55,9 +58,10 @@ def simulation(N, T, p_tx, alpha):
         if idx_tx >= N: idx_tx = 0
 
         # Save the current age
-        age_list.append(current_age.copy())
-
-    return np.asarray(age_list)
+        """ age_list.append(current_age.copy()) """
+        age_list[:, t] = current_age
+    
+    return age_list
 
 
 def simulation_V2(N, T, initial_p_tx, alpha, increase_function):
@@ -119,11 +123,10 @@ def get_simualtion_config():
         p_tx_array = [0.01, 0.05],
         # alpha_array = [0.1],
         print_var = True,
-        n_iterations = 5000,
+        n_iterations = 50000,
     )
 
     return config
-
 
 def simulate_multiple_parameters_V1():
     config = get_simualtion_config()
@@ -292,8 +295,91 @@ def compute_AoI_theory_multiple_parameter(compute_with_partial_sum = False):
 
     return mean_age_array
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
+# Parallel function
+
+def create_args_for_parallel(p_tx_array, q_array, N_array, n_iteration, add_index = True):
+    args = []
+
+    for i in range(len(N_array)):
+        N = N_array[i]
+        for j in range(len(p_tx_array)):
+            p_tx = p_tx_array[j]
+            for k in range(len(q_array)):
+                q = q_array[k]
+                if add_index: tmp_args = [N, n_iteration, p_tx, q, i, j, k]
+                else: tmp_args = [N, n_iteration, p_tx, q]
+
+                args.append(tmp_args)
+
+    return args
+
+def simulate_multiple_parameters_V1_parallel():
+    config = get_simualtion_config()
+
+    p_tx_array = config['p_tx_array']
+    alpha_array = config['alpha_array']
+    N_array = config['N_array']
+
+    return __simulate_multiple_parameters_V1_parallel(p_tx_array, alpha_array, N_array, config['T'])
+
+# NOT WORKING 
+@jit(nopython = True)
+def __simulate_multiple_parameters_V1_parallel(p_tx_array, alpha_array, N_array, T):
+    mean_age_list = []
+    mean_age_array = np.zeros((len(p_tx_array), len(alpha_array), len(N_array)))
+    
+    for i in range(len(p_tx_array)):
+        p_tx = p_tx_array[i]
+        for j in prange(len(alpha_array)):
+            alpha = alpha_array[j]
+            for k in prange(len(N_array)):
+                N = int(N_array[k])
+                
+                # Compute the simulation
+                aoi_history = simulation(N, T, p_tx, alpha)
+                
+                # Compute the mean AoI for this set of parameter and save the results
+                mean_age_list.append(aoi_history.mean(0))
+                mean_age_array [i, j, k] = mean_age_list[-1].mean()
+
+    mean_age = np.asarray(mean_age_list)
+
+    return mean_age_array, mean_age
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 #%% Main function
+
+def test_simulation(multiprocess = False):
+    p_tx_array = [5 * 1e-3, 5 * 1e-2, 1e-1]
+    alpha_array = np.geomspace(1e-5, 1, 200)
+    N_array = [1, 5, 10, 25]
+    n_iteration = 5000
+
+    if multiprocess:
+        args = create_args_for_parallel(p_tx_array, alpha_array, N_array, n_iteration, False)
+        
+        st = time.time()
+        with mp.Pool(processes = mp.cpu_count()) as pool:
+            results = pool.starmap(simulation, args)
+        print("Time simulation: {} (multiprocess)".format(time.time() - st)) 
+    else:
+        results = np.zeros((len(N_array), len(p_tx_array), len(alpha_array)))
+
+        st = time.time()
+        for i in range(len(N_array)):
+            N = N_array[i]
+            for j in range(len(p_tx_array)):
+                p_tx = p_tx_array[j]
+
+                for k in range(len(alpha_array)):
+                    alpha = alpha_array[k]
+
+                    tmp_result = simulation(N, n_iteration, p_tx, alpha)
+                    results[i,j,k] = tmp_result.mean()
+
+        print("Total time: {} (single thread)".format(time.time() - st))
+
 
 def main():
     pass
