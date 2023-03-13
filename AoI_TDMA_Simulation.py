@@ -24,7 +24,7 @@ from numba import jit, prange
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 #%% Simulation function
 
-@jit(nopython = True, parallel = True)
+@jit(nopython = True, parallel = False)
 def simulation(N, T, p_tx, alpha):
     """
     Simple simulation where each sensor can transmit only during its turn according to a transmission probability
@@ -324,12 +324,12 @@ def simulate_multiple_parameters_V1_parallel():
     return __simulate_multiple_parameters_V1_parallel(p_tx_array, alpha_array, N_array, config['T'])
 
 # NOT WORKING 
-@jit(nopython = True)
+@jit(nopython = True, parallel = True)
 def __simulate_multiple_parameters_V1_parallel(p_tx_array, alpha_array, N_array, T):
     mean_age_list = []
     mean_age_array = np.zeros((len(p_tx_array), len(alpha_array), len(N_array)))
     
-    for i in range(len(p_tx_array)):
+    for i in prange(len(p_tx_array)):
         p_tx = p_tx_array[i]
         for j in prange(len(alpha_array)):
             alpha = alpha_array[j]
@@ -347,13 +347,31 @@ def __simulate_multiple_parameters_V1_parallel(p_tx_array, alpha_array, N_array,
 
     return mean_age_array, mean_age
 
+@jit(nopython = True, parallel = True)
+def test_jit_single_thread(p_tx_array, N_array, alpha_array, n_iteration):
+
+    results = np.zeros((len(N_array), len(p_tx_array), len(alpha_array)))
+    for i in prange(len(N_array)):
+        N = N_array[i]
+        for j in prange(len(p_tx_array)):
+            p_tx = p_tx_array[j]
+
+            for k in prange(len(alpha_array)):
+                alpha = alpha_array[k]
+
+                tmp_result = simulation(N, n_iteration, p_tx, alpha)
+                results[i,j,k] = tmp_result.mean()
+
+    return results
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 #%% Main function
 
 def test_simulation(multiprocess = False):
-    p_tx_array = [5 * 1e-3, 5 * 1e-2, 1e-1]
+    
+    p_tx_array = np.asarray([5 * 1e-3, 5 * 1e-2, 1e-1])
     alpha_array = np.geomspace(1e-5, 1, 200)
-    N_array = [1, 5, 10, 25]
+    N_array = np.asarray([1, 5, 10, 25])
     n_iteration = 5000
 
     if multiprocess:
@@ -362,6 +380,7 @@ def test_simulation(multiprocess = False):
         st = time.time()
         with mp.Pool(processes = mp.cpu_count()) as pool:
             results = pool.starmap(simulation, args)
+
         print("Time simulation: {} (multiprocess)".format(time.time() - st)) 
     else:
         results = np.zeros((len(N_array), len(p_tx_array), len(alpha_array)))
@@ -377,7 +396,7 @@ def test_simulation(multiprocess = False):
 
                     tmp_result = simulation(N, n_iteration, p_tx, alpha)
                     results[i,j,k] = tmp_result.mean()
-
+        # results = test_jit_single_thread(p_tx_array, N_array, alpha_array, n_iteration)
         print("Total time: {} (single thread)".format(time.time() - st))
 
 
