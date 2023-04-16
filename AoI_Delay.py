@@ -116,12 +116,12 @@ def compute_aoi_multiple_value_simulation():
         N_tx = config['M_list'][i]
         for j in range(len(d_values)):
             d = d_values[j]
+            print(N_tx, j)
             for k in range(len(t_values)):
                 t = t_values[k]
                 
-                results[i, j, k] = simulation(config['L'], N_tx,
-                                              d, config['d_type'],
-                                              t, config['t_type'])
+                aoi = simulation(config['L'], N_tx,d, config['d_type'], t, config['t_type'])
+                results[i, j, k] = aoi
 
     plt.plot(d_values, results[0, :, 0])
     plt.plot(d_values, results[1, :, 0])
@@ -145,11 +145,12 @@ def simulation(L : int, N_tx : int, average_d : float, d_type : str, average_t :
     current_aoi = 0
     aoi_history = np.zeros(L)
 
-    transmission_instants = compute_transmission_instants(N_tx, average_d, average_t)
+    transmission_interval = compute_transmission_instants(N_tx, average_d, average_t)
     idx_current_tx = 0
 
-    current_d = sample_distribution(average_d, d_type)
-    current_t = sample_distribution(average_t, t_type)
+    d_delay = sample_distribution(average_d, d_type)
+    t_delay = sample_distribution(average_t, t_type)
+    current_interval = transmission_interval[idx_current_tx] + d_delay + t_delay
     
     t_array = np.linspace(0, 1, L)
 
@@ -157,22 +158,26 @@ def simulation(L : int, N_tx : int, average_d : float, d_type : str, average_t :
         t = t_array[i]
 
         current_aoi += t
+        current_interval -= t
 
-        if t >= transmission_instants[idx_current_tx] + current_d + current_t: # i.e. the transmission has taken place
+        if current_interval < 0: # i.e. the transmission has taken place
             # This value is used to correct the results given by the discrete nature of the simulation
-            adjustment_value = t - (transmission_instants + current_d + current_t)
-            current_aoi = current_t + adjustment_value
+            adjustment_value = np.abs(current_interval)
+            current_aoi = t_delay + adjustment_value
             
             # Sample new values for the activation and transmission delay
-            current_d = sample_distribution(average_d, d_type)
-            current_t = sample_distribution(average_t, t_type)
+            d_delay = sample_distribution(average_d, d_type)
+            t_delay = sample_distribution(average_t, t_type)
             
             # Advance the idx of the current tx
             idx_current_tx += 1
-        
+            
+            # Compute the new interval
+            if idx_current_tx <= len(transmission_interval) - 1: current_interval = transmission_interval[idx_current_tx] + d_delay + t_delay
+
         aoi_history[i] = current_aoi
 
-    return aoi_history.mean()
+    return aoi_history
 
 def sample_distribution(distribution_average : float, distribution_type : str):
     """
@@ -180,7 +185,6 @@ def sample_distribution(distribution_average : float, distribution_type : str):
     distribution_average: average value (i.e. expected_value) of the distribution
     distribution_type: string that specify the distribution type. It can only have value uniform or exponential
     """
-
     if distribution_type == 'uniform': x = np.random.uniform(low = 0, high = 2 * distribution_average)
     elif distribution_type  == 'exponential': x = np.random.exponential(scale = distribution_average)
     else: raise ValueError("Wrong distribution type")
