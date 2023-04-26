@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-# from numba import jit, prange
+from numba import jit, prange
+import time
 
 """
 %load_ext autoreload
@@ -18,7 +19,7 @@ def config_settings():
         t_points = 10,
         t_type = 'uniform',
         max_t_delay = 0,
-        M_list = [2, 5],
+        M_list = [4, 5],
         L = 500, # used only for the simulation
         integration_type = 0, # used only for the simulation
     )
@@ -28,29 +29,30 @@ def config_settings():
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 # Implementation of theory formulas
 
+def aoi_Leo(Q, M, d, d_type):
+    aoi = 0
+
+    aoi += (M + 1) * (Q ** 2)
+    if d_type == 'uniform': aoi += 2 * M * ((4/3) * (d ** 2))
+    elif d_type == 'exponential': aoi += 2 * M * (2 * (d ** 2))
+    aoi -= (M + 1) * (d ** 2)
+
+    aoi /= 2
+
+    return aoi
+
 def aoi_delay(Q : float, M : int, d : float, t : float, d_type : str, t_type : str):
     aoi_1 = aoi_triangle(Q, M, d, t, d_type, t_type)
     aoi_2 = aoi_rectangle(Q, M, d, t, d_type, t_type)
 
     return aoi_1 + aoi_2
 
-    # aoi = (M + 1) * (Q ** 2)
-    #
-    # if d_type == 'uniform': aoi += 2 * M * (4/3) * (expected_value(d) ** 2)
-    # elif d_type == 'exponential': aoi += 2 * M * 2 * (expected_value(d) ** 2)
-    # else: raise ValueError("Error d_type")
-    #
-    # aoi -= (M + 1) * (expected_value(d) ** 2)
-    # aoi /= 2
-    #
-    # return aoi
-
 def aoi_triangle(Q, M, d, t, d_type, t_type):
     """
     Calculate the part of AoI that depends on the triangles    
     """
-
-    aoi = Q/2 
+    aoi = 0
+    aoi += Q/2 
     aoi += M * var(d, d_type) 
     aoi += (2 * (Q ** 2) - 4 * Q) * (expected_value(t) ** 2)
     aoi += (M - 1) * var(t, t_type)
@@ -107,7 +109,8 @@ def compute_aoi_multiple_value_theory(config):
             for k in range(len(t_values)):
                 t = t_values[k]
                 
-                results[i, j, k] = aoi_delay(Q, M, d, t, config['d_type'], config['t_type'])
+                # results[i, j, k] = aoi_delay(Q, M, d, t, config['d_type'], config['t_type'])
+                results[i, j, k] = aoi_Leo(Q, M, d, config['d_type'])
 
     # plt.plot(d_values, results[0, :, 0])
     # plt.plot(d_values, results[1, :, 0])
@@ -148,7 +151,7 @@ def compute_aoi_multiple_value_simulation(config):
 
     return results, d_values, t_values
 
-# @jit(nopython = True, parallel = False)
+@jit(nopython = True, parallel = False)
 def simulation(L : int, N_tx : int, average_d : float, d_type : str, average_t :float, t_type : str):
     """
     Simulation to compute the average AoI.
@@ -171,7 +174,6 @@ def simulation(L : int, N_tx : int, average_d : float, d_type : str, average_t :
     current_interval = transmission_interval[idx_current_tx] + d_delay + t_delay
     
     simulation_step = 1 / L
-
     for i in range(L):
         current_aoi += simulation_step
         current_interval -= simulation_step
@@ -193,9 +195,11 @@ def simulation(L : int, N_tx : int, average_d : float, d_type : str, average_t :
             else: current_interval = 10000
 
         aoi_history[i] = current_aoi
-
+    
+    # print(idx_current_tx, len(transmission_interval))
     return aoi_history
 
+@jit(nopython = True, parallel = False)
 def sample_distribution(distribution_average : float, distribution_type : str):
     """
     Sample from a random variable
@@ -203,12 +207,14 @@ def sample_distribution(distribution_average : float, distribution_type : str):
     distribution_type: string that specify the distribution type. It can only have value uniform or exponential
     """
     
-    if distribution_type == 'uniform': x = np.random.uniform(low = 0, high = distribution_average)
+    # TODO CHECK
+    if distribution_type == 'uniform': x = np.random.uniform(low = 0, high =  2 * distribution_average)
     elif distribution_type  == 'exponential': x = np.random.exponential(scale = distribution_average)
     else: raise ValueError("Wrong distribution type")
 
     return x
 
+@jit(nopython = True, parallel = False)
 def compute_transmission_instants(N_tx : int, average_d: float, average_t : float):
     Q = 1 / (N_tx + 1)
     y_array = np.zeros(N_tx)
@@ -239,22 +245,36 @@ def main():
     results_theory_exponential, _, _ = compute_aoi_multiple_value_theory(config)
 
     config['d_type'] = 'uniform'
-    results_simulation = np.zeros(results_theory_uniform.shape)
-    n_simulation = 10 
+    n_simulation = 500
+    
+    start = time.time()
+    config['integration_type'] = 0
+    results_simulation_0 = np.zeros(results_theory_uniform.shape)
     for i in range(n_simulation):
         tmp_results_simulation, _, _ = compute_aoi_multiple_value_simulation(config)
-        results_simulation += tmp_results_simulation
-
-    results_simulation /= n_simulation
+        results_simulation_0 += tmp_results_simulation
+    results_simulation_0 /= n_simulation
+    print("Simulation time = {}s".format(time.time() - start))
     
+    # config['integration_type'] = 1
+    # results_simulation_1 = np.zeros(results_theory_uniform.shape)
+    # for i in range(n_simulation):
+    #     tmp_results_simulation, _, _ = compute_aoi_multiple_value_simulation(config)
+    #     results_simulation_1 += tmp_results_simulation
+    # results_simulation_1 /= n_simulation
+
     x = np.geomspace(0.005, config['max_d_delay'], config['d_points'])
-    # plt.plot(x, results_theory_uniform[0, :, 0], label = 'uniform M = {}'.format(config['M_list'][0]))
-    # plt.plot(x, results_theory_uniform[1, :, 0], label = 'uniform M = {}'.format(config['M_list'][1]))
+    plt.plot(x, results_theory_uniform[0, :, 0], label = 'uniform M = {}'.format(config['M_list'][0]))
+    plt.plot(x, results_theory_uniform[1, :, 0], label = 'uniform M = {}'.format(config['M_list'][1]))
     plt.plot(x, results_theory_exponential[0, :, 0], label = 'exponential M = {}'.format(config['M_list'][0]))
     plt.plot(x, results_theory_exponential[1, :, 0], label = 'exponential M = {}'.format(config['M_list'][1]))
-    plt.plot(x, results_simulation[0, :, 0], label = 'simulation M = {}'.format(config['M_list'][0]))
-    plt.plot(x, results_simulation[1, :, 0], label = 'simulation M = {}'.format(config['M_list'][1]))
+     
+    plt.plot(x, results_simulation_0[0, :, 0], label = 'simulation M = {}'.format(config['M_list'][0]))
+    plt.plot(x, results_simulation_0[1, :, 0], label = 'simulation M = {}'.format(config['M_list'][1]))
+    # plt.plot(x, results_simulation_1[0, :, 0], label = 'simulation M = {}'.format(config['M_list'][0]))
+    # plt.plot(x, results_simulation_1[1, :, 0], label = 'simulation M = {}'.format(config['M_list'][1]))
     
+    plt.xlim([x[0], x[-1]])
     plt.xscale('log')
     plt.legend()
     plt.show()
