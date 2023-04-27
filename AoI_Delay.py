@@ -1,5 +1,7 @@
 import numpy as np
-import plot_aoi as plt
+import plot_aoi as plt_aoi
+import matplotlib.pyplot as plt
+import time
 from numba import jit, prange
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -218,7 +220,7 @@ def sample_distribution(distribution_average : float, distribution_type : str):
     distribution_type: string that specify the distribution type. It can only have value uniform or exponential
     """
     
-    if distribution_type == 'uniform': x = np.random.uniform(float(0), distribution_average)
+    if distribution_type == 'uniform': x = np.random.uniform(float(0), 2 * distribution_average)
     elif distribution_type  == 'exponential': x = np.random.exponential(scale = distribution_average)
     else: raise ValueError("Wrong distribution type")
 
@@ -239,7 +241,15 @@ def compute_transmission_instants(N_tx : int, average_d: float, average_t : floa
     
     return y_array
 
+def average_multiple_simulation(n_simulation, config):
+    results_simulation = np.zeros([len(config['M_list']), config['d_points'], config['t_points']]) 
+    for i in range(n_simulation): 
+        tmp_results_simulation, _, _ = compute_aoi_multiple_value_simulation(config) 
+        results_simulation += tmp_results_simulation
 
+    results_simulation /= n_simulation
+
+    return results_simulation
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
 def main():
@@ -260,20 +270,54 @@ def main():
     config['d_type'] = 'exponential'
     config['t_type'] = 'uniform'
     results_theory_eu, _, _ = compute_aoi_multiple_value_theory(config)
+    
+    n_simulation = 20
+    start = time.time()
 
-    # config['d_type'] = 'exponential' 
-    # results_simulation = np.zeros(results_theory_ue.shape) 
-    # n_simulation = 25 
-    # for i in range(n_simulation): 
-    #     tmp_results_simulation, _, _ = compute_aoi_multiple_value_simulation(config) 
-    #     results_simulation += tmp_results_simulation
+    config['d_type'] = 'uniform'
+    config['t_type'] = 'uniform'
+    results_theory_uu_sim  = average_multiple_simulation(n_simulation, config)
+    print("Simulation time: ", time.time() - start)
+    
+    # config['d_type'] = 'exponential'
+    # config['t_type'] = 'exponential'
+    # results_theory_ee_sim  = average_multiple_simulation(n_simulation, config)
     #
-    # results_simulation /= n_simulation
-
+    # config['d_type'] = 'uniform'
+    # config['t_type'] = 'exponential'
+    # results_theory_ue, _, _ = compute_aoi_multiple_value_theory(config)
+    #
+    # config['d_type'] = 'exponential'
+    # config['t_type'] = 'uniform'
+    # results_theory_eu, _, _ = compute_aoi_multiple_value_theory(config)
+    #
     # plt.plot_single_delay(results_theory_uu, results_theory_ee, config, "D")
     # plt.plot_single_delay(results_theory_uu, results_theory_ee, config, "T")
 
-    plt.plot_delay_comparison(results_theory_eu, config)
+    # plt_aoi.plot_delay_comparison(results_theory_eu, config)
+
+    x = np.geomspace(0.005, config['max_d_delay'], config['d_points'])
+    plt.plot(x, results_theory_uu[0, :, 0])
+    plt.plot(x, results_theory_uu[1, :, 0])
+    plt.plot(x, results_theory_uu_sim[0, :, 0])
+    plt.plot(x, results_theory_uu_sim[1, :, 0])
+    plt.xlabel("Average Delay")
+    plt.ylabel("Average AoI")
+    plt.xscale('log')
+    plt.title("Only D Delay (UNIFORM)")
+    plt.show()
+
+    plt.plot(x, results_theory_uu[0, 0])
+    plt.plot(x, results_theory_uu[1, 0])
+    plt.plot(x, results_theory_uu_sim[0, 0])
+    plt.plot(x, results_theory_uu_sim[1, 0])
+    plt.xlabel("Average Delay")
+    plt.ylabel("Average AoI")
+    plt.xscale('log')
+    plt.title("Only T Delay (UNIFORM)")
+    plt.show()
+
+    
 
 if __name__ == "__main__":
     main()

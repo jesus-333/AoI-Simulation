@@ -424,6 +424,9 @@ def get_xticks_labels(N, L):
 # Plot globecom
 
 def plot_single_delay(results_uu, results_ee, config, delay_type):
+    """
+    Plot the results when we have only a single type of Delay (i.e. only D or only T)
+    """
     x = np.geomspace(0.005, config['max_d_delay'], 100)
 
     fig, ax = plt.subplots()
