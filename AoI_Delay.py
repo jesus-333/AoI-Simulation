@@ -1,6 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt
-# from numba import jit, prange
+import plot_aoi as plt
+from numba import jit, prange
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
@@ -91,6 +91,12 @@ def var(x, x_type):
 
 
 def compute_aoi_multiple_value_theory(config):
+    """
+    Compute the average AoI using the theoretical formula.
+    The results are saved in a matrix of dimension possible_tx x D x T
+
+    possible_tx = list with the number of transmission (e.g. [4,5,6,7,8] indicate that the results are computer for 4 transmissions, 5 transmissions etc)
+    """
     
     # Check d_values
     if config['max_d_delay'] != 0 and config['max_d_delay'] > 0.005:
@@ -105,13 +111,13 @@ def compute_aoi_multiple_value_theory(config):
     # Matrix to save the results
     results = np.zeros((len(config['M_list']), config['d_points'], config['t_points']))
     
-    for i in range(len(config['M_list'])):
+    for i in range(len(config['M_list'])): # Cycle through number of transmission
         M = config['M_list'][i]
         Q = 1 / (M + 1)
         print(M, Q)
-        for j in range(len(d_values)):
+        for j in range(len(d_values)): # Cycle through possible value of D delay
             d = d_values[j]
-            for k in range(len(t_values)):
+            for k in range(len(t_values)): # Cycle through possible value of T delay
                 t = t_values[k]
                 
                 results[i, j, k] = aoi_delay(Q, M, d, t, config['d_type'], config['t_type'])
@@ -155,7 +161,7 @@ def compute_aoi_multiple_value_simulation(config):
                 """     raise ValueError("AAAAA") """
     return results, d_values, t_values
 
-# @jit(nopython = True, parallel = False)
+@jit(nopython = True, parallel = False)
 def simulation(L : int, N_tx : int, average_d : float, d_type : str, average_t :float, t_type : str):
     """
     Simulation to compute the average AoI.
@@ -203,6 +209,7 @@ def simulation(L : int, N_tx : int, average_d : float, d_type : str, average_t :
     
     return aoi_history, current_interval
 
+@jit(nopython = True, parallel = False)
 def sample_distribution(distribution_average : float, distribution_type : str):
     """
     Sample from a random variable
@@ -210,12 +217,13 @@ def sample_distribution(distribution_average : float, distribution_type : str):
     distribution_type: string that specify the distribution type. It can only have value uniform or exponential
     """
     
-    if distribution_type == 'uniform': x = np.random.uniform(low = 0, high = distribution_average)
+    if distribution_type == 'uniform': x = np.random.uniform(float(0), distribution_average)
     elif distribution_type  == 'exponential': x = np.random.exponential(scale = distribution_average)
     else: raise ValueError("Wrong distribution type")
 
     return x
 
+@jit(nopython = True, parallel = False)
 def compute_transmission_instants(N_tx : int, average_d: float, average_t : float):
     Q = 1 / (N_tx + 1)
     y_array = np.zeros(N_tx)
@@ -230,71 +238,6 @@ def compute_transmission_instants(N_tx : int, average_d: float, average_t : floa
     
     return y_array
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-# Plot function
-
-def plot_config():
-    config = dict(
-
-    )
-
-    return config
-
-def plot_single_delay(results_uu, results_ee, config, delay_type):
-    x = np.geomspace(0.005, config['max_d_delay'], 100)
-
-    fig, ax = plt.subplots()
-
-    if delay_type == 'D':
-        uu = results_uu[:, : , 0]
-        ee = results_ee[:, : , 0]
-    elif delay_type == 'T':
-        uu = results_uu[:, 0 , :]
-        ee = results_ee[:, 0 , :]
-    else:
-        raise ValueError("Wrong delay type")
-
-    ax.plot(x, uu[0], 
-             label = 'uniform M = {}'.format(config['M_list'][0]), 
-             marker = '*', markevery = 10, markersize = 10)
-    ax.plot(x, uu[1], 
-             label = 'uniform M = {}'.format(config['M_list'][1]),
-             marker = '^', markevery = 10, markersize = 10)
-    ax.plot(x, ee[0], 
-             label = 'exponential M = {}'.format(config['M_list'][0]),
-             marker = 'o', markevery = 10, markersize = 10)
-    ax.plot(x, ee[1], 
-             label = 'exponential M = {}'.format(config['M_list'][1]),
-             marker = 's', markevery = 10, markersize = 10)
-    
-    """ ax.plot(x, results_simulation[0, 0], label = 'simulation M = {}'.format(config['M_list'][0])) """
-    """ ax.plot(x, results_simulation[1, 0], label = 'simulation M = {}'.format(config['M_list'][1])) """
-    
-    name = "single_delay_only_{}".format(delay_type)
-
-    ax.set_ylabel("Average AoI (optimized)")
-    ax.set_xlabel("Average Delay ({})".format(delay_type))
-    ax.set_xlim([min(x), max(x)])
-        
-    ax.set_xscale('log')
-    
-    labels = [0.005, 0.01, 0.02, 0.05, 0.08]
-    ax.set_xticks(labels)
-    ax.set_xticklabels(labels)
-    ax.grid(True)
-    ax.legend()
-    
-    fig.tight_layout()
-
-    file_type = 'eps'
-    filename = "Plot/delay/{}.{}".format(name, file_type)
-    plt.savefig(filename, format=file_type)
-
-    file_type = 'png'
-    filename = "Plot/delay/{}.{}".format(name, file_type)
-    plt.savefig(filename, format=file_type)
-    
-    plt.show()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
@@ -317,17 +260,17 @@ def main():
     config['t_type'] = 'uniform'
     results_theory_eu, _, _ = compute_aoi_multiple_value_theory(config)
 
-    # config['d_type'] = 'exponential' 
-    # results_simulation = np.zeros(results_theory_ue.shape) 
-    # n_simulation = 25 
-    # for i in range(n_simulation): 
-    #     tmp_results_simulation, _, _ = compute_aoi_multiple_value_simulation(config) 
-    #     results_simulation += tmp_results_simulation
-    # 
-    # results_simulation /= n_simulation
+    config['d_type'] = 'exponential' 
+    results_simulation = np.zeros(results_theory_ue.shape) 
+    n_simulation = 25 
+    for i in range(n_simulation): 
+        tmp_results_simulation, _, _ = compute_aoi_multiple_value_simulation(config) 
+        results_simulation += tmp_results_simulation
 
-    plot_single_delay(results_theory_uu, results_theory_ee, config, "D")
-    plot_single_delay(results_theory_uu, results_theory_ee, config, "T")
+    results_simulation /= n_simulation
+
+    plt.plot_single_delay(results_theory_uu, results_theory_ee, config, "D")
+    plt.plot_single_delay(results_theory_uu, results_theory_ee, config, "T")
 
 if __name__ == "__main__":
     main()
