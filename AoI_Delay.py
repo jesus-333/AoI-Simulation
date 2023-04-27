@@ -271,7 +271,7 @@ def main():
     config['t_type'] = 'uniform'
     results_theory_eu, _, _ = compute_aoi_multiple_value_theory(config)
     
-    n_simulation = 20
+    n_simulation = 10
     start = time.time()
 
     config['d_type'] = 'uniform'
@@ -304,6 +304,7 @@ def main():
     plt.xlabel("Average Delay")
     plt.ylabel("Average AoI")
     plt.xscale('log')
+    plt.legend(["M = 4 (teo)", "M = 5 (teo)", "M = 4 (sim)", "M = 5 (sim)"])
     plt.title("Only D Delay (UNIFORM)")
     plt.show()
 
@@ -315,6 +316,7 @@ def main():
     plt.ylabel("Average AoI")
     plt.xscale('log')
     plt.title("Only T Delay (UNIFORM)")
+    plt.legend(["M = 4 (teo)", "M = 5 (teo)", "M = 4 (sim)", "M = 5 (sim)"])
     plt.show()
 
     
