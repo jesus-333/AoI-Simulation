@@ -96,6 +96,8 @@ def compute_aoi_multiple_value_theory(config):
     The results are saved in a matrix of dimension possible_tx x D x T
 
     possible_tx = list with the number of transmission (e.g. [4,5,6,7,8] indicate that the results are computer for 4 transmissions, 5 transmissions etc)
+    D = possible values of D delay
+    T = possible values of T delay
     """
     
     # Check d_values
@@ -114,7 +116,6 @@ def compute_aoi_multiple_value_theory(config):
     for i in range(len(config['M_list'])): # Cycle through number of transmission
         M = config['M_list'][i]
         Q = 1 / (M + 1)
-        print(M, Q)
         for j in range(len(d_values)): # Cycle through possible value of D delay
             d = d_values[j]
             for k in range(len(t_values)): # Cycle through possible value of T delay
@@ -260,17 +261,19 @@ def main():
     config['t_type'] = 'uniform'
     results_theory_eu, _, _ = compute_aoi_multiple_value_theory(config)
 
-    config['d_type'] = 'exponential' 
-    results_simulation = np.zeros(results_theory_ue.shape) 
-    n_simulation = 25 
-    for i in range(n_simulation): 
-        tmp_results_simulation, _, _ = compute_aoi_multiple_value_simulation(config) 
-        results_simulation += tmp_results_simulation
+    # config['d_type'] = 'exponential' 
+    # results_simulation = np.zeros(results_theory_ue.shape) 
+    # n_simulation = 25 
+    # for i in range(n_simulation): 
+    #     tmp_results_simulation, _, _ = compute_aoi_multiple_value_simulation(config) 
+    #     results_simulation += tmp_results_simulation
+    #
+    # results_simulation /= n_simulation
 
-    results_simulation /= n_simulation
+    # plt.plot_single_delay(results_theory_uu, results_theory_ee, config, "D")
+    # plt.plot_single_delay(results_theory_uu, results_theory_ee, config, "T")
 
-    plt.plot_single_delay(results_theory_uu, results_theory_ee, config, "D")
-    plt.plot_single_delay(results_theory_uu, results_theory_ee, config, "T")
+    plt.plot_delay_comparison(results_theory_eu, config)
 
 if __name__ == "__main__":
     main()

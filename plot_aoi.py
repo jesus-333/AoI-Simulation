@@ -26,8 +26,8 @@ def get_plot_config():
         # - - - - - - - - - - - - -
         # Common parameters
         figsize = (15, 10),
-        fontsize = 28,
-        save_fig = False,
+        fontsize = 20,
+        save_fig = True,
         # - - - - - - - - - - - - -
         # Parameters for aoi surface
         use_imshow = False,
@@ -38,6 +38,8 @@ def get_plot_config():
         labels = ["p = {}".format(p) for p in [0.005, 0.01, 0.02, 0.05]],
         idx_to_plot = [(i, 0) for i in range(4) ],
         linestyle = ['solid', 'dotted', 'dashed', 'dashdot']
+        # - - - - - - - - - - - - -
+        # Parameters for delay plot (globecom)
     )
 
     return config
@@ -477,62 +479,84 @@ def plot_single_delay(results_uu, results_ee, config, delay_type):
     
     plt.show()
 
-def plot_delay_comparison(results, idx_M = 0):
+def plot_delay_comparison(results, config_computation : dict, max_delay : float = 0.08, idx_M :int = 0):
     """
-    Create a plot with 3 line: only D delay, only T delay, combination of D + T delay
+    Create a plot with 3 line: only D delay, only T delay, equal combination of D + T delay (D/2 + T/2)
     
-    results: numpy array of dimensions M x D x T (see AoI_delay.py for the output dimension)
+    results: numpy array of dimensions possible_tx x D x T (see AoI_delay.py for the output dimension)
+    config_computation: dictionary with the config used for the computation
+    max_delay: max value of the combination of the two delay
     idx_M: index of the first dimension of the results matrix.
     """
 
-    only_D = results[:, :, 0]
-    only_T = results[:, 0, :]
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
+    # Compute values used for the plot
 
-
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-# Function to check/rewrite
-
-def plot_old_1(alpha, c, std):
-    plt.figure(figsize = (15, 10))
-    plt.plot(alpha, c[0, :, 0], label = "p = 0.01  N = 10 (mean)", linestyle = 'solid')
-    plt.plot(alpha, c[0, :, 1], label = "p = 0.01  N = 30 (mean)", linestyle = 'dashed')
-    plt.plot(alpha, c[1, :, 0], label = "p = 0.05  N = 10 (mean)", linestyle = 'dotted')
-    plt.plot(alpha, c[1, :, 1], label = "p = 0.05  N = 30 (mean)", linestyle = 'dashdot')
+    # Compute d-values and t-values
+    d_values = np.geomspace(0.005, config_computation['max_d_delay'], config_computation['d_points'])
+    t_values = np.geomspace(0.005, config_computation['max_t_delay'], config_computation['t_points'])
     
-    tmp_label = "p = 0.01  n = 10 (std)"
-    plt.fill_between(alpha, c[0, :, 0] + std[0, :, 0], c[0, :, 0] - std[0, :, 0], label = tmp_label, alpha = 0.25)
-    tmp_label = "p = 0.01  n = 30 (std)"
-    plt.fill_between(alpha, c[0, :, 1] + std[0, :, 1], c[0, :, 1] - std[0, :, 1], label = tmp_label, alpha = 0.25)
-    tmp_label = "p = 0.05  n = 10 (std)"
-    plt.fill_between(alpha, c[1, :, 0] + std[1, :, 0], c[1, :, 0] - std[1, :, 0], label = tmp_label, alpha = 0.25)
-    tmp_label = "p = 0.05  n = 30 (std)"
-    plt.fill_between(alpha, c[1, :, 1] + std[1, :, 1], c[1, :, 1] - std[1, :, 1], label = tmp_label, alpha = 0.25)
+    # Indices for the combined delay and valued of the combined delay
+    idx_both_delays = np.zeros(results.shape)
+    idx_both_delays, delay_values= compute_idx_both_delays(idx_both_delays, d_values, t_values, max_delay, idx_M)
+    both_delay = results[idx_both_delays]
+    
+    idx_single_delay_d = np.logical_and(d_values >= min(delay_values), d_values <= max(delay_values))
+    idx_single_delay_t = np.logical_and(t_values >= min(delay_values), t_values <= max(delay_values))
 
-    plt.legend(ncol = 2, fontsize = 20)
-    plt.yscale('log')
-    plt.xscale('log')
-    plt.xlim([1e-3, 1])
-    plt.grid(True)
-    plt.xlabel('Probability $q$ of a useful update from a neighbor')
-    plt.ylabel('Average AoI')
-    plt.title('AoI vs $q$ TDMA Simulation')
+    only_D = results[idx_M, idx_single_delay_d, 0]
+    only_T = results[idx_M, 0, idx_single_delay_t]
+    
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
+    # Plot 
+    config = get_plot_config()
+    
+    fig, ax = plt.subplots(1, 1, figsize = config['figsize']) 
+    plt.rcParams.update({'font.size': config['fontsize']})
+    
+    ax.plot(delay_values, both_delay, label = "Both Delay")
+    ax.plot(d_values[idx_single_delay_d], only_D, label = "Only D delay")
+    ax.plot(t_values[idx_single_delay_t], only_T, label = "Only T delay")
+
+    # Axis stuff
+    ax.set_xscale('log')
+    ticks = [0.011, 0.015, 0.02, 0.03, 0.045, 0.07]
+    ax.set_xticks(ticks, labels = ticks, minor = False)
+    ax.set_xticks(ticks, labels = ticks,minor = True)
+    xlim = [max(min(d_values[idx_single_delay_d]), min(delay_values)),min(max(d_values[idx_single_delay_d]), max(delay_values))]
+    ax.set_xlim(xlim)
+    ax.grid(True, 'major')
+    
+    # Legend and label
+    ax.set_xlabel("Average Delay")
+    ax.set_ylabel("Average AoI")
+    ax.legend()
+
+    fig.tight_layout()
+    
+    if config['save_fig']:
+        name = "delay_comparison"
+        file_type = 'eps'
+        filename = "Plot/delay/{}.{}".format(name, file_type)
+        plt.savefig(filename, format=file_type)
+
+        file_type = 'png'
+        filename = "Plot/delay/{}.{}".format(name, file_type)
+        plt.savefig(filename, format=file_type)
+    
     plt.show()
 
 
-def plot_old_2(alpha, a , c):
-    plt.figure(figsize = (15, 10))
-    plt.plot(alpha, a[0, :, 0], label =  "Simulation   p = 0.01  N = 10", linestyle = 'solid', linewidth = 2)
-    plt.plot(alpha, c[0, :, 0], label =  "Closed form  p = 0.01  N = 10", linestyle = 'dashed',linewidth = 2)
-    plt.plot(alpha, a[57, :, 1], label = "Simulation   p = 0.05  N = 30", linestyle = 'dotted', linewidth = 2)
-    plt.plot(alpha, c[57, :, 1], label = "Closed form  p = 0.05  N = 30", linestyle = 'dashdot', linewidth = 2)
+def compute_idx_both_delays(idx_both_delays, d_values, t_values, max_delay, idx_M):
+    actual_delay = d_values[0] + t_values[0]
+    delay_values = []
+    
+    i = 0
+    while actual_delay <= max_delay:
+        delay_values.append(actual_delay)
+        idx_both_delays[idx_M, i, i] = 1
+        
+        i+= 1
+        actual_delay = d_values[i] + t_values[i]
 
-    plt.legend()
-    plt.yscale('log')
-    plt.xscale('log')
-    plt.xlim([1e-3, 1])
-    plt.grid(True)
-    plt.xlabel('Probability $q$ of a useful update from a neighbor')
-    plt.ylabel('AoI')
-    plt.title('Simulation vs Closed Form')
-    plt.show()
+    return idx_both_delays == 1, np.asarray(delay_values)
