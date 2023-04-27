@@ -418,6 +418,78 @@ def get_xticks_labels(N, L):
     
     return labels
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Plot globecom
+
+def plot_single_delay(results_uu, results_ee, config, delay_type):
+    x = np.geomspace(0.005, config['max_d_delay'], 100)
+
+    fig, ax = plt.subplots()
+
+    if delay_type == 'D':
+        uu = results_uu[:, : , 0]
+        ee = results_ee[:, : , 0]
+    elif delay_type == 'T':
+        uu = results_uu[:, 0 , :]
+        ee = results_ee[:, 0 , :]
+    else:
+        raise ValueError("Wrong delay type")
+
+    ax.plot(x, uu[0], 
+             label = 'uniform M = {}'.format(config['M_list'][0]), 
+             marker = '*', markevery = 10, markersize = 10)
+    ax.plot(x, uu[1], 
+             label = 'uniform M = {}'.format(config['M_list'][1]),
+             marker = '^', markevery = 10, markersize = 10)
+    ax.plot(x, ee[0], 
+             label = 'exponential M = {}'.format(config['M_list'][0]),
+             marker = 'o', markevery = 10, markersize = 10)
+    ax.plot(x, ee[1], 
+             label = 'exponential M = {}'.format(config['M_list'][1]),
+             marker = 's', markevery = 10, markersize = 10)
+    
+    """ ax.plot(x, results_simulation[0, 0], label = 'simulation M = {}'.format(config['M_list'][0])) """
+    """ ax.plot(x, results_simulation[1, 0], label = 'simulation M = {}'.format(config['M_list'][1])) """
+    
+    name = "single_delay_only_{}".format(delay_type)
+
+    ax.set_ylabel("Average AoI (optimized)")
+    ax.set_xlabel("Average Delay ({})".format(delay_type))
+    ax.set_xlim([min(x), max(x)])
+        
+    ax.set_xscale('log')
+    
+    labels = [0.005, 0.01, 0.02, 0.05, 0.08]
+    ax.set_xticks(labels)
+    ax.set_xticklabels(labels)
+    ax.grid(True)
+    ax.legend()
+    
+    fig.tight_layout()
+
+    file_type = 'eps'
+    filename = "Plot/delay/{}.{}".format(name, file_type)
+    plt.savefig(filename, format=file_type)
+
+    file_type = 'png'
+    filename = "Plot/delay/{}.{}".format(name, file_type)
+    plt.savefig(filename, format=file_type)
+    
+    plt.show()
+
+def plot_delay_comparison(results, idx_M = 0):
+    """
+    Create a plot with 3 line: only D delay, only T delay, combination of D + T delay
+    
+    results: numpy array of dimensions M x D x T (see AoI_delay.py for the output dimension)
+    idx_M: index of the first dimension of the results matrix.
+    """
+
+    only_D = results[:, :, 0]
+    only_T = results[:, 0, :]
+
+
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 # Function to check/rewrite
 
