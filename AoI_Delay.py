@@ -16,15 +16,15 @@ import AoI_Delay as ad
 
 def config_settings():
     config = dict(
-        d_points = 100,
+        d_points = 50,
         d_type = 'uniform',
         max_d_delay = 0.08,
-        t_points = 100,
+        t_points = 2,
         t_type = 'uniform',
-        max_t_delay = 0.08,
+        max_t_delay = 0,
         M_list = [4, 5],
         L = 500, # Number of simulation step. Used only for the simulation
-        integration_type = 0, # used only for the simulation
+        integration_type = 1, # used only for the simulation
     )
     
     return config
@@ -149,19 +149,17 @@ def compute_aoi_multiple_value_simulation(config):
             d = d_values[j]
             for k in range(len(t_values)):
                 t = t_values[k]
-                
-                aoi, current_interval = simulation(config['L'], N_tx, d, config['d_type'], t, config['t_type'])
-                if integration_type == 0: aoi_average = np.mean(aoi)
-                elif integration_type == 1: aoi_average = np.trapz(aoi, np.linspace(0, 1, len(aoi)))
+                current_interval = 0
+                tentativi = 0
+                while current_interval < 9000:
+                    aoi, current_interval = simulation(config['L'], N_tx, d, config['d_type'], t, config['t_type'])
+                    if integration_type == 0: aoi_average = np.mean(aoi)
+                    elif integration_type == 1: aoi_average = np.trapz(aoi, np.linspace(0, 1, len(aoi)))
+                    tentativi += 1
 
                 results[i, j, k] = aoi_average
-
-                """ if current_interval < 9000:  """
-                """     print("NOT FINISH") """
-                """     print("{}, {}".format(i , N_tx)) """
-                """     print("{}, {}".format(j , d)) """
-                """     print("{}, {}".format(k , t)) """
-                """     raise ValueError("AAAAA") """
+                # print(N_tx, d, t, tentativi)
+                    
     return results, d_values, t_values
 
 @jit(nopython = True, parallel = False)
@@ -188,6 +186,18 @@ def simulation(L : int, N_tx : int, average_d : float, d_type : str, average_t :
     
     simulation_step = 1 / L
 
+    # print("L = ", L)
+    # print("Simulation step = ", simulation_step)
+    # print("M = ", N_tx)
+    # print("Q = ", 1 / (N_tx + 1))
+    # print("average d = ", average_d)
+    # print("average t = ", average_t)
+    # print("d_delay = ", d_delay)
+    # print("t_delay = ", t_delay)
+    # print("transmission_interval = ", transmission_interval)
+    # print("d_type", d_type)
+    # print("t_type", t_type, "\n")
+
     for i in range(L):
         current_aoi += simulation_step
         current_interval -= simulation_step
@@ -205,8 +215,10 @@ def simulation(L : int, N_tx : int, average_d : float, d_type : str, average_t :
             idx_current_tx += 1
             
             # Compute the new interval
-            if idx_current_tx <= len(transmission_interval) - 1: current_interval = transmission_interval[idx_current_tx] + d_delay + t_delay
-            else: current_interval = int(10000)
+            if idx_current_tx <= len(transmission_interval) - 1: 
+                current_interval = transmission_interval[idx_current_tx] + d_delay + t_delay
+            else: 
+                current_interval = int(10000)
 
         aoi_history[i] = current_aoi
     
@@ -220,7 +232,7 @@ def sample_distribution(distribution_average : float, distribution_type : str):
     distribution_type: string that specify the distribution type. It can only have value uniform or exponential
     """
     
-    if distribution_type == 'uniform': x = np.random.uniform(float(0), 2 * distribution_average)
+    if distribution_type == 'uniform': x = np.random.uniform(float(0), distribution_average)
     elif distribution_type  == 'exponential': x = np.random.exponential(scale = distribution_average)
     else: raise ValueError("Wrong distribution type")
 
@@ -267,21 +279,23 @@ def main():
     config['t_type'] = 'exponential'
     results_theory_ue, _, _ = compute_aoi_multiple_value_theory(config)
 
-    config['d_type'] = 'exponential'
+    config['d_type'] = 'uniform'
     config['t_type'] = 'uniform'
     results_theory_eu, _, _ = compute_aoi_multiple_value_theory(config)
     
-    n_simulation = 10
-    start = time.time()
+    n_simulation = 333
 
+    start = time.time()
     config['d_type'] = 'uniform'
     config['t_type'] = 'uniform'
-    results_theory_uu_sim  = average_multiple_simulation(n_simulation, config)
-    print("Simulation time: ", time.time() - start)
+    results_sim_uu  = average_multiple_simulation(n_simulation, config)
+    print("Simulation time (uu): ", time.time() - start)
     
-    # config['d_type'] = 'exponential'
-    # config['t_type'] = 'exponential'
-    # results_theory_ee_sim  = average_multiple_simulation(n_simulation, config)
+    start = time.time()
+    config['d_type'] = 'exponential'
+    config['t_type'] = 'exponential'
+    results_sim_ee = average_multiple_simulation(n_simulation, config)
+    print("Simulation time (ee): ", time.time() - start)
     #
     # config['d_type'] = 'uniform'
     # config['t_type'] = 'exponential'
@@ -297,27 +311,33 @@ def main():
     # plt_aoi.plot_delay_comparison(results_theory_eu, config)
 
     x = np.geomspace(0.005, config['max_d_delay'], config['d_points'])
-    plt.plot(x, results_theory_uu[0, :, 0])
-    plt.plot(x, results_theory_uu[1, :, 0])
-    plt.plot(x, results_theory_uu_sim[0, :, 0])
-    plt.plot(x, results_theory_uu_sim[1, :, 0])
+    # plt.plot(x, results_theory_uu[0, :, 0], label = "M = 4 (uni)(the)")
+    # plt.plot(x, results_theory_uu[1, :, 0], label = "M = 5 (uni)(the)")
+    plt.plot(x, results_theory_ee[0, :, 0], label = "M = 4 (exp)(the)")
+    plt.plot(x, results_theory_ee[1, :, 0], label = "M = 5 (exp)(the)")
+    plt.plot(x, results_sim_uu[0, :, 0], label = "M = 4 (uni)(sim)")
+    plt.plot(x, results_sim_uu[1, :, 0], label = "M = 5 (uni)(sim)")
+    plt.plot(x, results_sim_ee[0, :, 0], label = "M = 4 (exp)(sim)")
+    plt.plot(x, results_sim_ee[1, :, 0], label = "M = 5 (exp)(sim)")
+    ticks = [0.011, 0.015, 0.02, 0.03, 0.045, 0.07]
     plt.xlabel("Average Delay")
     plt.ylabel("Average AoI")
-    plt.xscale('log')
-    plt.legend(["M = 4 (teo)", "M = 5 (teo)", "M = 4 (sim)", "M = 5 (sim)"])
+    # plt.xscale('log')
+    # plt.legend(["M = 4 (teo)", "M = 5 (teo)", "M = 4 (sim)", "M = 5 (sim)"])
+    plt.legend()
     plt.title("Only D Delay (UNIFORM)")
     plt.show()
 
-    plt.plot(x, results_theory_uu[0, 0])
-    plt.plot(x, results_theory_uu[1, 0])
-    plt.plot(x, results_theory_uu_sim[0, 0])
-    plt.plot(x, results_theory_uu_sim[1, 0])
-    plt.xlabel("Average Delay")
-    plt.ylabel("Average AoI")
-    plt.xscale('log')
-    plt.title("Only T Delay (UNIFORM)")
-    plt.legend(["M = 4 (teo)", "M = 5 (teo)", "M = 4 (sim)", "M = 5 (sim)"])
-    plt.show()
+    # plt.plot(x, results_theory_uu[0, 0])
+    # plt.plot(x, results_theory_uu[1, 0])
+    # plt.plot(x, results_theory_uu_sim[0, 0])
+    # plt.plot(x, results_theory_uu_sim[1, 0])
+    # plt.xlabel("Average Delay")
+    # plt.ylabel("Average AoI")
+    # plt.xscale('log')
+    # plt.title("Only T Delay (UNIFORM)")
+    # plt.legend(["M = 4 (teo)", "M = 5 (teo)", "M = 4 (sim)", "M = 5 (sim)"])
+    # plt.show()
 
     
 
