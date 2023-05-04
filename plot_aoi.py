@@ -563,3 +563,23 @@ def compute_idx_both_delays(idx_both_delays, d_values, t_values, max_delay, idx_
         actual_delay = d_values[i] + t_values[i]
 
     return idx_both_delays == 1, np.asarray(delay_values)
+
+def plot_delay_theory_vs_sim_single_delat(results_theory, results_sim, delay_distribution, delay_type, config):
+    x = np.geomspace(0.005, config['max_d_delay'], config['d_points'])
+    for i in range(len(config['M_list'])):
+        M = config['M_list'][i]
+        if delay_type == 'D':
+            plt.plot(x, results_theory[i, :, 0], label = "M = {} ({})(theory)".format(M, delay_distribution))
+            plt.plot(x, results_sim[i, :, 0], label = "M = {} ({})(sim)".format(M, delay_distribution))
+        elif delay_type == 'T':
+            plt.plot(x, results_theory[i, 0, :], label = "M = {} ({})(theory)".format(M, delay_distribution))
+            plt.plot(x, results_sim[i, 0, :], label = "M = {} ({})(sim)".format(M, delay_distribution))
+        else:
+            raise ValueError("WRONG DELAY TYPE")
+    
+    ticks = [0.011, 0.015, 0.02, 0.03, 0.045, 0.07]
+    plt.xlabel("Average Delay")
+    plt.ylabel("Average AoI")
+    plt.legend()
+    plt.title("Only {} Delay ({})".format(delay_type, delay_distribution))
+    plt.show()
