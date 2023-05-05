@@ -173,6 +173,10 @@ def compute_aoi_multiple_value_simulation(config):
                 current_interval = 0
                 tentativi = 0
                 while current_interval < 9000:
+                    # If the last interval of the simulation has value 1000000 it means that all transmissions have been made
+                    # If it has a small value means that some transmission remain.
+                    # Thi while cylce iterate until all transmission are made
+
                     aoi, current_interval = simulation(config['L'], N_tx, d, config['d_type'], t, config['t_type'])
                     if integration_type == 0: aoi_average = np.mean(aoi)
                     elif integration_type == 1: aoi_average = np.trapz(aoi, np.linspace(0, 1, len(aoi)))
@@ -206,7 +210,8 @@ def simulation(L : int, N_tx : int, average_d : float, d_type : str, average_t :
     current_interval = transmission_interval[idx_current_tx] + d_delay_list[idx_current_tx] + t_delay_list[idx_current_tx]
     
     simulation_step = 1 / L
-
+    
+    # PRINT DI DEBUG
     # print("L = ", L)
     # print("Simulation step = ", simulation_step)
     # print("M = ", N_tx)
@@ -223,14 +228,10 @@ def simulation(L : int, N_tx : int, average_d : float, d_type : str, average_t :
         current_aoi += simulation_step
         current_interval -= simulation_step
 
-        if current_interval < 0: # i.e. the transmission has taken place
+        if current_interval <= 0: # i.e. the transmission has taken place
             # This value is used to correct the results given by the discrete nature of the simulation
             adjustment_value = np.abs(current_interval)
             current_aoi = t_delay_list[idx_current_tx] + adjustment_value
-            
-            # Sample new values for the activation and transmission delay
-            # d_delay = sample_distribution(average_d, d_type)
-            # t_delay = sample_distribution(average_t, t_type)
             
             # Advance the idx of the current tx
             idx_current_tx += 1
@@ -238,8 +239,8 @@ def simulation(L : int, N_tx : int, average_d : float, d_type : str, average_t :
             # Compute the new interval
             if idx_current_tx <= len(transmission_interval) - 1: 
                 current_interval = transmission_interval[idx_current_tx] + d_delay_list[idx_current_tx] + t_delay_list[idx_current_tx]
-            else: 
-                current_interval = int(10000)
+            else: # IF the transmission are ended sets the next interval to a value too large to finish 
+                current_interval = int(1000000)
 
         aoi_history[i] = current_aoi
     
@@ -304,6 +305,8 @@ def main():
     results_sim_ee = average_multiple_simulation(n_simulation, config)
     print("Simulation time (ee): ", time.time() - start)
 
+    plt_aoi.plot_delay_theory_vs_sim_single_delay(results_theory_uu, results_sim_uu, 'uniform', 'D', config)
+    plt_aoi.plot_delay_theory_vs_sim_single_delay(results_theory_ee, results_sim_ee, 'exponential', 'D', config)
 
 if __name__ == "__main__":
     main()

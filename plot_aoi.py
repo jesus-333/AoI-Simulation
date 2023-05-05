@@ -564,7 +564,7 @@ def compute_idx_both_delays(idx_both_delays, d_values, t_values, max_delay, idx_
 
     return idx_both_delays == 1, np.asarray(delay_values)
 
-def plot_delay_theory_vs_sim_single_delat(results_theory, results_sim, delay_distribution, delay_type, config):
+def plot_delay_theory_vs_sim_single_delay(results_theory, results_sim, delay_distribution, delay_type, config):
     x = np.geomspace(0.005, config['max_d_delay'], config['d_points'])
     for i in range(len(config['M_list'])):
         M = config['M_list'][i]
