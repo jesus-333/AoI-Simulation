@@ -38,17 +38,6 @@ def aoi_delay(Q : float, M : int, d : float, t : float, d_type : str, t_type : s
 
     return aoi_1 + aoi_2
 
-    # aoi = (M + 1) * (Q ** 2)
-    #
-    # if d_type == 'uniform': aoi += 2 * M * (4/3) * (expected_value(d) ** 2)
-    # elif d_type == 'exponential': aoi += 2 * M * 2 * (expected_value(d) ** 2)
-    # else: raise ValueError("Error d_type")
-    #
-    # aoi -= (M + 1) * (expected_value(d) ** 2)
-    # aoi /= 2
-    #
-    # return aoi
-
 def aoi_triangle(Q, M, d, t, d_type, t_type):
     """
     Calculate the part of AoI that depends on the triangles    
