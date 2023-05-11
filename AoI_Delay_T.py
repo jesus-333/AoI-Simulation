@@ -19,6 +19,7 @@ def config_settings():
     config = dict(
         t_points = 100,
         t_type = 'uniform',
+        t_min_delay = 0.005,
         t_max_delay = 0.08,
         M_list = [2,3,4],
         use_sum_for_theory = False,
@@ -113,18 +114,20 @@ def compare_aoi_formula():
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 # Simulation
 
+@jit(nopython = True, parallel = False)
 def simulation(L : int, M : int, average_t :float, t_type : str):
     y_array = compute_y_array(M, average_t)
     tx_instant_array = compute_transmission_instant(y_array)
-    t_delay_list = sample_distribution(average_t, t_type, M)
+    t_delay_array = sample_distribution(average_t, t_type, M)
     
     # Variable to save AoI
     current_aoi = 0
     aoi_history = np.zeros(L)
     
+    # Variable used for the tx
     idx_tx_instant = 0
     current_tx_instant = tx_instant_array[0]
-    tx_arrival = current_tx_instant + t_delay_list[0]
+    tx_arrival = current_tx_instant + t_delay_array[0]
     
     # Variable used to measure time in the simulation
     simulation_step = 1 / L
@@ -134,20 +137,29 @@ def simulation(L : int, M : int, average_t :float, t_type : str):
 
         if simulation_time >= tx_arrival:
             # Compute the correction factor due to the discrete time of the simulation
-            correction_factor = simulation_time - (tx_arrival)
+            correction_factor = simulation_time - tx_arrival
 
             # Reset the AoI
-            current_aoi = t_delay_list[current_tx_instant] + correction_factor
+            current_aoi = t_delay_array[idx_tx_instant] + correction_factor
             
             # Retrieve the next tx instant and corresponding delay
             idx_tx_instant += 1
-            current_tx_instant = tx_instant_array[idx_tx_instant]
-            tx_arrival = current_tx_instant + t_delay_list[idx_tx_instant]
-
-        aoi_history.append(current_aoi)
-
+            if idx_tx_instant <= len(tx_instant_array) - 1:
+                current_tx_instant = tx_instant_array[idx_tx_instant]
+                tx_arrival = current_tx_instant + t_delay_array[idx_tx_instant]
+            else:
+                current_tx_instant = 1
+                tx_arrival = 1e20
+        
+        # Save AoI for the current iteration of the simulation
+        aoi_history[i] = current_aoi
+        
+        # Advance simulation of 1 step
         current_aoi += simulation_step
         simulation_time += simulation_step
+    
+    print(tx_instant_array)
+    return aoi_history, current_tx_instant
 
 @jit(nopython = True, parallel = False)
 def compute_transmission_instant(y_array):
@@ -155,9 +167,11 @@ def compute_transmission_instant(y_array):
     Convert the transmission interval in the corresponding transmission instant
 
     Note that y_j = t_(j+1) - t_j and t_0 = 0 and t_M = 1
-    Due to this constraints the vector length of tx_instant_array will be len(y_array) - 2
     """
-    tx_instant_array = np.zeros(len(y_array) - 2)
+
+    # Note that with decision the last element of the array will remain a 1.
+    # In this case it can be used during the simulation to check if all the tx have been performed
+    tx_instant_array = np.ones(len(y_array))
 
     for i in range(len(y_array) - 1):
         if i == 0: 
@@ -183,3 +197,22 @@ def sample_distribution(distribution_average : float, distribution_type : str, s
 
     return x
 
+
+def compute_aoi_simulation_multiple_value(config : dict):
+    t_values = np.geomspace(config['t_min_delay'], config['t_max_delay'], config['t_points'])
+    results = np.zeros((len(config['M_list']), len(t_values)))
+
+    for i in range(len(config['M_list'])): # Iterate through number of tx
+        M = config['M_list'][i]
+        for j in range(len(t_values)): # Iterate through different values of T delay
+            T = t_values[j]
+            last_tx_instant = 0
+            while last_tx_instant != 1:
+                aoi_history, last_tx_instant = simulation(config['L'], M, T, config['t_type'])
+
+            if config['integration_type'] == 0: aoi_average = np.mean(aoi_history)
+            elif config['integration_type'] == 1: aoi_average = np.trapz(aoi_history, np.linspace(0, 1, len(aoi_history)))
+
+            results[i, j] = aoi_average
+
+    return results
