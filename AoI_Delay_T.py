@@ -2,7 +2,7 @@
 @Author: Alberto Zancanaro (Jesus)
 @Organization: University of Padua
 
-Simulation for the the AoI work with only propagation delay (T)
+Simulation for the the AoI work with only propagation delay (T) 
 """
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
