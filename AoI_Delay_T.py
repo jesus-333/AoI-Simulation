@@ -13,6 +13,11 @@ import time
 from numba import jit
 import matplotlib.pyplot as plt
 
+"""
+%load_ext autoreload
+%autoreload 2
+import AoI_Delay_T as ad
+"""
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
 def get_config_computation():
@@ -21,16 +26,19 @@ def get_config_computation():
         t_points = 100,
         t_type = 'uniform',
         t_min_delay = 0.005,
-        t_max_delay = 0.08,
+        t_max_delay = 0.05,
         M_list = [4, 5],
+        # M_list = np.arange(3, 20),
         # Parameter only for the simulation 
         use_sum_for_theory = True,
         L = 500, # Number of simulation step. Used only for the simulation
         integration_type = 1, # used only for the simulation
-        repeat_simulation = 30, # Number of time each simulation is repeated
+        repeat_simulation = 100, # Number of time each simulation is repeated
         # Other
-        print_var = True,
+        print_var = False,
     )
+
+    config['t_values'] = np.geomspace(config['t_min_delay'], config['t_max_delay'], config['t_points'])
 
     return config
 
@@ -39,13 +47,11 @@ def get_config_computation():
 
 @jit(nopython = True, parallel = False)
 def aoi_theory_formula(M : int, T : float):
-    # num = 1 + (M - 1) * (2 * T - (T ** 2))
-    # den = 2 * M
-
-    num_1 = (1 + M)
-    num_2 = 2 * T * ((M ** 2) - 1)
-    num_3 = (T ** 2) * (1 - M - (M ** 2))
-    den = 2 * (M ** 2)
+    
+    num_1 = 1
+    num_2 = 2 * ((M ** 2) + 1) * T
+    num_3 = (3 * (M ** 2) + 2 * M + 1) * (T ** 2)
+    den =  (M + 1) ** 2
 
     aoi = (num_1 + num_2 + num_3)/ den
 
@@ -77,17 +83,17 @@ def compute_y_array(M : int, T : float):
 
     for i in range(M + 1):
         if i != M:
-            y_i = (1 + T) / (M + 1)
+            y_i = (1 - T) / (M + 1)
         elif i == M:
             # y_i = (1 + (M - 1) * T) / M
-            y_i = (1 - M * T) / (M + 1)
+            y_i = (1 + M * T) / (M + 1)
 
         y_array[i] = y_i
 
     return y_array
 
 def compute_aoi_theory_multiple_value(config : dict):
-    t_values = np.geomspace(0.005, config['t_max_delay'], config['t_points'])
+    t_values = config['t_values']
     results = np.zeros((len(config['M_list']), len(t_values)))
 
     for i in range(len(config['M_list'])):
@@ -147,10 +153,6 @@ def simulation(L : int, M : int, average_t :float, t_type : str):
     simulation_step = 1 / L
     simulation_time = 0
     
-    # print(y_array, np.sum(y_array))
-    # print(tx_instant_array)
-    # print(t_delay_array, "\n")
-
     for i in range(L):
 
         if simulation_time >= tx_arrival:
@@ -184,8 +186,10 @@ def aoi_simulation(L : int, M : int, T : float, t_type: str, repeat_simulation :
     tmp_results = np.zeros(repeat_simulation)
     for k in range(repeat_simulation):
         last_tx_instant = 0
+        i = 0
         while last_tx_instant != 1:
-            aoi_history, last_tx_instant = simulation(L, M, T,t_type)
+            i+=1
+            aoi_history, last_tx_instant = simulation(L, M, T, t_type)
 
         if integration_type == 0: aoi_average = np.mean(aoi_history)
         elif integration_type == 1: aoi_average = np.trapz(aoi_history, np.linspace(0, 1, len(aoi_history)))
@@ -232,7 +236,7 @@ def sample_distribution(distribution_average : float, distribution_type : str, s
 
 
 def compute_aoi_simulation_multiple_value(config : dict):
-    t_values = np.geomspace(config['t_min_delay'], config['t_max_delay'], config['t_points'])
+    t_values = config['t_values']
     results = np.zeros((len(config['M_list']), len(t_values)))
 
     for i in range(len(config['M_list'])): # Iterate through number of tx
@@ -245,7 +249,25 @@ def compute_aoi_simulation_multiple_value(config : dict):
 
     return results
 
-def main():
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Computation for paper
+
+def aoi_vs_T():
+    config_computation = get_config_computation()
+    results = compute_aoi_theory_multiple_value(config_computation)
+    
+    config_plot = get_config_plot()
+    plot_aoi_vs_T(results, config_computation, config_plot)
+
+def aoi_vs_M():
+    config_computation = get_config_computation()
+    config_computation['t_values'] = [0.005, 0.02, 0.04, 0.08]
+    results = compute_aoi_theory_multiple_value(config_computation)
+
+    config_plot = get_config_plot()
+    plot_aoi_vs_M(results, config_computation, config_plot)
+
+def theory_vs_simulation():
     config_computation = get_config_computation()
 
     results_theory = compute_aoi_theory_multiple_value(config_computation)
@@ -254,22 +276,34 @@ def main():
     config_plot = get_config_plot()
     plot_theory_vs_sim_delay_T(results_theory, results_sim, config_computation, config_plot)
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Plot stuff
+
 def get_config_plot():
     config = dict(
         figsize = (10, 8),
-        use_log_scale = False,
+        use_log_scale = True,
+        fontsize = 15,
+        linewidth = 2.5,
+        n_ticks = 7,
+        save_fig = True,
+        save_path = 'Plot/delay_T/',
     )
 
     return config
 
-def plot_theory_vs_sim_delay_T(results_theory, results_sim, config_computation, config_plot):
-    t_values = np.geomspace(config_computation['t_min_delay'], config_computation['t_max_delay'], config_computation['t_points'])
+def plot_aoi_vs_T(results, config_computation, config_plot):
+    t_values = config_computation['t_values']
 
     fig, ax = plt.subplots(figsize = config_plot['figsize'])
+    plt.rcParams.update({'font.size': config_plot['fontsize']})
 
-    for i in range(results_theory.shape[0]):
-        ax.plot(t_values, results_theory[i], label = 'Theory M = {}'.format(config_computation['M_list'][i]))
-        ax.plot(t_values, results_sim[i], label = 'Simulation M = {}'.format(config_computation['M_list'][i]))
+    linestyle_theory = ['solid', 'dotted', 'dashdot', 'dashed']
+    for i in range(results.shape[0]):
+        ax.plot(t_values, results[i], 
+                label = 'M = {}'.format(config_computation['M_list'][i]),
+                linewidth = config_plot['linewidth'], linestyle = linestyle_theory[i]
+                )
     
     ax.legend()
 
@@ -277,6 +311,81 @@ def plot_theory_vs_sim_delay_T(results_theory, results_sim, config_computation, 
     ax.set_xlabel("Average Delay")
     ax.set_xlim([t_values[0], t_values[-1]])
     if config_plot['use_log_scale']: ax.set_xscale('log') 
+
+    ticks = np.round(np.geomspace(config_computation['t_min_delay'], config_computation['t_max_delay'], config_plot['n_ticks']), 3)
+    ax.set_xticks(ticks)
+    ax.set_xticklabels(ticks)
+    ax.set_xticks(ticks, minor = True)
+    ax.grid(True)
     
     fig.tight_layout()
+    if config_plot['save_fig']: 
+        fig.savefig(config_plot['save_path'] + "Single_Delay_T_AoI_VS_T.png")
+        fig.savefig(config_plot['save_path'] + "Single_Delay_T_AoI_VS_T.eps")
     plt.show()
+
+
+def plot_aoi_vs_M(results, config_computation, config_plot):
+    M_values = config_computation['M_list']
+    # t_values = np.round(np.geomspace(config_computation['t_min_delay'], config_computation['t_max_delay'], config_computation['t_points']), 3)
+    t_values = config_computation['t_values']
+
+    fig, ax = plt.subplots(figsize = config_plot['figsize'])
+    plt.rcParams.update({'font.size': config_plot['fontsize']})
+
+    linestyle_theory = ['solid', 'dotted', 'dashdot', 'dashed']
+    for i in range(results.shape[1]):
+        ax.plot(M_values, results[:, i], 
+                label = 'T = {}'.format(t_values[i]),
+                linewidth = config_plot['linewidth'], linestyle = linestyle_theory[i]
+                )
+    ax.legend()
+
+    ax.set_ylabel("Average AoI")
+    ax.set_xlabel("Number of transmissions (M)")
+    ax.set_xlim([M_values[0], M_values[-1]])
+    ax.grid(True)
+    
+    fig.tight_layout()
+    if config_plot['save_fig']: 
+        fig.savefig(config_plot['save_path'] + "Single_Delay_T_AoI_VS_M.eps")
+        fig.savefig(config_plot['save_path'] + "Single_Delay_T_AoI_VS_M.png")
+    plt.show()
+
+def plot_theory_vs_sim_delay_T(results_theory, results_sim, config_computation, config_plot):
+    t_values = np.geomspace(config_computation['t_min_delay'], config_computation['t_max_delay'], config_computation['t_points'])
+
+    fig, ax = plt.subplots(figsize = config_plot['figsize'])
+    plt.rcParams.update({'font.size': config_plot['fontsize']})
+
+    linestyle_theory = ['solid', 'dotted', 'solid']
+    linestyle_sim = ['dashdot', 'dashed', 'solid']
+    for i in range(results_theory.shape[0]):
+        ax.plot(t_values, results_theory[i], 
+                label = 'Theory M = {}'.format(config_computation['M_list'][i]),
+                linewidth = config_plot['linewidth'], linestyle = linestyle_theory[i]
+                )
+        ax.plot(t_values, results_sim[i], 
+                label = 'Simulation M = {}'.format(config_computation['M_list'][i]),
+                linewidth = config_plot['linewidth'], linestyle = linestyle_sim[i]
+                )
+    
+    ax.legend()
+
+    ax.set_ylabel("Average AoI")
+    ax.set_xlabel("Average Delay")
+    ax.set_xlim([t_values[0], t_values[-1]])
+    if config_plot['use_log_scale']: ax.set_xscale('log') 
+
+    ticks = np.round(np.geomspace(config_computation['t_min_delay'], config_computation['t_max_delay'], config_plot['n_ticks']), 3)
+    ax.set_xticks(ticks)
+    ax.set_xticklabels(ticks)
+    ax.set_xticks(ticks, minor = True)
+    ax.grid(True)
+    
+    fig.tight_layout()
+    if config_plot['save_fig']: 
+        fig.savefig(config_plot['save_path'] + "Single_Delay_T_Sim_VS_Theory_{}.eps".format(config_computation['t_type']))
+        fig.savefig(config_plot['save_path'] + "Single_Delay_T_Sim_VS_Theory_{}.png".format(config_computation['t_type']))
+    plt.show()
+
