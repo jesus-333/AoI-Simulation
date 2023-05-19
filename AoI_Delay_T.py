@@ -128,9 +128,10 @@ def compare_aoi_formula():
     plt.legend()
     plt.show()
 
-def probability_fail_tx(M : int, T : float, t_type : str):
+def probability_overflow(M : int, T : float, t_type : str):
     if t_type == 'uniform':
         num = T * (M + 2) - 1
+        # num = M * (1 - T)
         den = 2 * T * (M + 1)
         prob = num/den
     elif t_type == 'exponential':
@@ -143,7 +144,7 @@ def probability_fail_tx(M : int, T : float, t_type : str):
 
     return prob
 
-def compute_probability_fail_tx_multiple_value(config : dict):
+def compute_probability_overflow_multiple_value(config : dict):
     t_values = config['t_values']
     results = np.zeros((len(config['M_list']), len(t_values)))
 
@@ -151,7 +152,7 @@ def compute_probability_fail_tx_multiple_value(config : dict):
         M = config['M_list'][i]
         for j in range(len(t_values)):
             T = t_values[j]
-            results[i, j] = probability_fail_tx(M, T, config['t_type'])           
+            results[i, j] = probability_overflow(M, T, config['t_type'])           
 
     return results
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -298,14 +299,19 @@ def theory_vs_simulation():
     config_plot = get_config_plot()
     plot_theory_vs_sim_delay_T(results_theory, results_sim, config_computation, config_plot)
 
-def fail_tx():
+def overflow():
     config_computation = get_config_computation()
-    results = compute_probability_fail_tx_multiple_value(config_computation)
-    results[results < 0] = 0
-    
     config_plot = get_config_plot()
-    plot_probability_fail_tx(results, config_computation, config_plot)
 
+    config_computation['t_type'] = 'exponential'
+    results = compute_probability_overflow_multiple_value(config_computation)
+    results[results < 0] = 0
+    plot_probability_overflow(results, config_computation, config_plot)
+
+    config_computation['t_type'] = 'uniform'
+    results = compute_probability_overflow_multiple_value(config_computation)
+    results[results < 0] = 0
+    plot_probability_overflow(results, config_computation, config_plot)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 # Plot stuff
 
@@ -418,7 +424,7 @@ def plot_theory_vs_sim_delay_T(results_theory, results_sim, config_computation, 
         fig.savefig(config_plot['save_path'] + "Single_Delay_T_Sim_VS_Theory_{}.png".format(config_computation['t_type']))
     plt.show()
 
-def plot_probability_fail_tx(results, config_computation, config_plot):
+def plot_probability_overflow(results, config_computation, config_plot):
     M_values = config_computation['M_list']
     t_values = config_computation['t_values']
 
@@ -433,7 +439,7 @@ def plot_probability_fail_tx(results, config_computation, config_plot):
                 )
     ax.legend()
 
-    ax.set_ylabel("Probability of fail last tx")
+    ax.set_ylabel("Probability of overflow")
     ax.set_xlabel("Average Delay")
     ax.set_xlim([t_values[0], t_values[-1]])
     # ax.set_ylim([0, 1])
