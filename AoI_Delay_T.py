@@ -26,11 +26,12 @@ def get_config_computation():
         t_points = 100,
         t_type = 'uniform',
         t_min_delay = 0.005,
-        t_max_delay = 1,
+        t_max_delay = 0.3,
         M_list = [4, 5, 8, 10],
         # M_list = np.arange(3, 20),
         # Parameter only for the simulation 
         use_sum_for_theory = True,
+        compute_not_optimized = False,
         L = 500, # Number of simulation step. Used only for the simulation
         integration_type = 1, # used only for the simulation
         repeat_simulation = 100, # Number of time each simulation is repeated
@@ -49,8 +50,16 @@ def get_config_computation():
 def aoi_theory_formula(M : int, T : float):
     
     Q = 1/(M + 1)
-    A = M * Q * T 
-    aoi = Q/2 + A * (1 - A)
+
+    aoi = Q + Q * M * T * (2 - T)
+    aoi /= 2
+
+    return aoi
+
+@jit(nopython = True, parallel = False)
+def aoi_theory_formula_NOT_OPTIMIZED(M : int, T : float):
+    Q = 1/(M + 1)
+    aoi = (Q * (1 + 2 * M * T)) / 2   
 
     return aoi
 
@@ -99,10 +108,13 @@ def compute_aoi_theory_multiple_value(config : dict):
         for j in range(len(t_values)):
             T = t_values[j]
             
-            if config['use_sum_for_theory']:
-                results[i, j] = aoi_theory_sum(M, T)
+            if config['compute_not_optimized']:
+                results[i, j] = aoi_theory_formula_NOT_OPTIMIZED(M, T)
             else:
-                results[i, j] = aoi_theory_formula(M, T)
+                if config['use_sum_for_theory']:
+                    results[i, j] = aoi_theory_sum(M, T)
+                else:
+                    results[i, j] = aoi_theory_formula(M, T)
 
     return results
             
@@ -286,6 +298,7 @@ def aoi_vs_T():
 def aoi_vs_M():
     config_computation = get_config_computation()
     config_computation['t_values'] = [0.005, 0.02, 0.04, 0.08]
+    config_computation['M_list'] = np.arange(3, 20)
     results = compute_aoi_theory_multiple_value(config_computation)
 
     config_plot = get_config_plot()
@@ -298,6 +311,18 @@ def theory_vs_simulation():
     
     config_plot = get_config_plot()
     plot_theory_vs_sim_delay_T(results_theory, results_sim, config_computation, config_plot)
+
+def optimized_vs_NOT_optimized():
+    config_computation = get_config_computation()
+    config_computation['compute_not_optimized'] = False
+    results_optimized = compute_aoi_theory_multiple_value(config_computation)
+
+    config_computation['compute_not_optimized'] = True 
+    results_NOT_optimized = compute_aoi_theory_multiple_value(config_computation)
+    
+    config_plot = get_config_plot()
+    plot_ratio = True
+    plot_optimized_vs_NOT_optimized(results_optimized, results_NOT_optimized, config_computation, config_plot, plot_ratio)
 
 def overflow():
     config_computation = get_config_computation()
@@ -367,11 +392,12 @@ def plot_aoi_vs_M(results, config_computation, config_plot):
 
     fig, ax = plt.subplots(figsize = config_plot['figsize'])
     plt.rcParams.update({'font.size': config_plot['fontsize']})
+    plt.rcParams['text.usetex'] = False
 
     linestyle_theory = ['solid', 'dotted', 'dashdot', 'dashed']
     for i in range(results.shape[1]):
         ax.plot(M_values, results[:, i], 
-                label = 'T = {}'.format(t_values[i]),
+                label = r'E[T] = {}'.format(t_values[i]),
                 linewidth = config_plot['linewidth'], linestyle = linestyle_theory[i]
                 )
     ax.legend()
@@ -449,4 +475,50 @@ def plot_probability_overflow(results, config_computation, config_plot):
     if config_plot['save_fig']: 
         fig.savefig(config_plot['save_path'] + "probability_fail_tx_{}.eps".format(config_computation['t_type']))
         fig.savefig(config_plot['save_path'] + "probability_fail_tx_{}.png".format(config_computation['t_type']))
+    plt.show()
+
+def plot_optimized_vs_NOT_optimized(results_optimized, results_NOT_optimized, config_computation, config_plot, plot_ratio = False):
+
+    M_list = config_computation['M_list']
+    t_values = config_computation['t_values']
+
+    fig, ax = plt.subplots(figsize = config_plot['figsize'])
+    plt.rcParams.update({'font.size': config_plot['fontsize']})
+
+    linestyle = ['solid', 'dotted', 'dashdot', 'dashed']
+    for i in range(results_optimized.shape[0]):
+        if plot_ratio:
+            ax.plot(t_values,  results_NOT_optimized[i] / results_optimized[i],
+                    label = "M = {}".format(M_list[i]), linestyle = linestyle[i])
+        else:
+            ax.plot(t_values, results_optimized[i], 
+                    label = "Optimized M = {}".format(M_list[i]))
+            ax.plot(t_values, results_NOT_optimized[i], 
+                    label = "Not Optimized M = {}".format(M_list[i]))
+
+    ax.legend()
+    if plot_ratio:
+        ax.set_ylabel("Not optimized/Optimized AoI ratio")
+    else:
+        ax.set_ylabel("Average AoI")
+    ax.set_xlabel("Average Delay")
+    ax.set_xlim([t_values[0], t_values[-1]])
+    if config_plot['use_log_scale']: ax.set_xscale('log') 
+
+    ticks = np.round(np.geomspace(config_computation['t_min_delay'], config_computation['t_max_delay'], config_plot['n_ticks']), 3)
+    ax.set_xticks(ticks)
+    ax.set_xticklabels(ticks)
+    ax.set_xticks(ticks, minor = True)
+    ax.grid(True)
+    
+    fig.tight_layout()
+
+    if config_plot['save_fig']: 
+        if plot_ratio:
+            title = config_plot['save_path'] + "optimized_vs_NOT_optimized_ratio" 
+        else:
+            title = config_plot['save_path'] + "optimized_vs_NOT_optimized" 
+        fig.savefig(title + ".png")
+        fig.savefig(title + ".eps")
+
     plt.show()
