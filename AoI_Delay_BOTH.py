@@ -49,11 +49,10 @@ def get_config_computation():
     return config
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-# Theory section
+# Theory Computation single values 
 
 @jit(nopython = True, parallel = False)
 def aoi_theory_formula(M : int, D : float, T : float, d_type : str):
-    
     Q = 1/(M + 1)
     
     aoi = Q + (2 * M * var(D, d_type)) - (M * Q * (T**2)) + (2 * Q * M * T)
@@ -63,10 +62,10 @@ def aoi_theory_formula(M : int, D : float, T : float, d_type : str):
 
 @jit(nopython = True, parallel = False)
 def aoi_theory_formula_NOT_OPTIMIZED(M : int, D : float, T : float):
-    Q = 1/(M + 1)
-    aoi = (Q * (1 + 2 * M * T)) / 2   
-
+    aoi = 0
+    # TODO
     return aoi
+
 
 @jit(nopython = True, parallel = False)
 def aoi_theory_sum(M : int, D: float, T : float, d_type : str):
@@ -121,7 +120,20 @@ def var(x, x_type):
 
     return expected_value_squared - (x ** 2)
 
+def probability_overflow(M : int, D : float, T : float, d_type : str, t_type : str):
+    # TODO 
+    prob = -1
+    if t_type == 'uniform':
+        pass
+    elif t_type == 'exponential':
+        pass
+    else:
+        raise ValueError("Wrong distribution type")
+
+    return prob
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Theory. Computation multiple values and similar stuff
 
 def compute_aoi_theory_multiple_value(config : dict):
     d_values = config['d_values']
@@ -156,29 +168,30 @@ def compare_aoi_formula():
     config['use_sum_for_theory'] = True
     results_sum = compute_aoi_theory_multiple_value(config)
     
+    d_values = np.geomspace(0.005, config['d_max_delay'], config['d_points'])
     t_values = np.geomspace(0.005, config['t_max_delay'], config['t_points'])
     
+    fig, ax = plt.subplots(1, 2, figsize = (12, 8))
+
     M_list = config['M_list']
     for i in range(results_formula.shape[0]):
-        plt.plot(t_values, results_formula[i], label = M_list[i])
-        plt.plot(t_values, results_sum[i], label = M_list[i])
-        # plt.plot(t_values, results_sum[i] / results_formula[i])
+        idx_0 = np.random.randint(results_formula.shape[2])
+        ax[0].plot(d_values, results_formula[i, :, idx_0], label = M_list[i])
+        ax[0].plot(d_values, results_sum[i, :, idx_0], label = M_list[i])
+        ax[0].set_xlabel('D Delay')
 
-    plt.xscale('log')
-    plt.legend()
-    plt.show()
+        idx_1 = np.random.randint(results_formula.shape[1])
+        ax[1].plot(t_values, results_formula[i, idx_1, :], label = M_list[i])
+        ax[1].plot(t_values, results_sum[i, idx_1, :], label = M_list[i])
+        ax[1].set_xlabel('T Delay')
 
-def probability_overflow(M : int, D : float, T : float, d_type : str, t_type : str):
-    # TODO 
-    prob = -1
-    if t_type == 'uniform':
-        pass
-    elif t_type == 'exponential':
-        pass
-    else:
-        raise ValueError("Wrong distribution type")
+    for i in range(len(ax)):
+        ax[i].set_xscale('log')
+        ax[i].grid(True)
+        ax[i].legend()
+    fig.tight_layout()
+    fig.show()
 
-    return prob
 
 def compute_probability_overflow_multiple_value(config : dict):
     t_values = config['t_values']
@@ -194,6 +207,7 @@ def compute_probability_overflow_multiple_value(config : dict):
                 results[i, j, k] = probability_overflow(M, D, T, config['d_type'], config['t_type'])           
 
     return results
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 # Simulation
 
@@ -210,7 +224,7 @@ def simulation(L : int, M : int, average_d :float, d_type : str, average_t :floa
     
    # Variable used for the tx
     idx_tx_instant = 0
-    current_tx_instant = tx_instant_array[0]
+    current_tx_instant = tx_instant_array[0] + d_delay_array[0]
     tx_arrival = current_tx_instant + t_delay_array[0]
     
     # Variable used to measure time in the simulation
@@ -229,7 +243,7 @@ def simulation(L : int, M : int, average_d :float, d_type : str, average_t :floa
             # Retrieve the next tx instant and corresponding delay
             idx_tx_instant += 1
             if idx_tx_instant <= len(tx_instant_array) - 1:
-                current_tx_instant = tx_instant_array[idx_tx_instant]
+                current_tx_instant = tx_instant_array[idx_tx_instant] + d_delay_array[idx_tx_instant]
                 tx_arrival = current_tx_instant + t_delay_array[idx_tx_instant]
             else:
                 current_tx_instant = 1
