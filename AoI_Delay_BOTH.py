@@ -34,7 +34,7 @@ def get_config_computation():
         M_list = [4, 5, 8, 10],
         # M_list = np.arange(3, 20),
         # Parameter only for the simulation 
-        use_sum_for_theory = True,
+        use_sum_for_theory = False,
         compute_not_optimized = False,
         L = 500, # Number of simulation step. Used only for the simulation
         integration_type = 1, # used only for the simulation
@@ -232,7 +232,6 @@ def simulation(L : int, M : int, average_d :float, d_type : str, average_t :floa
     simulation_time = 0
     
     for i in range(L):
-
         if simulation_time >= tx_arrival:
             # Compute the correction factor due to the discrete time of the simulation
             correction_factor = simulation_time - tx_arrival
@@ -242,12 +241,13 @@ def simulation(L : int, M : int, average_d :float, d_type : str, average_t :floa
             
             # Retrieve the next tx instant and corresponding delay
             idx_tx_instant += 1
-            if idx_tx_instant <= len(tx_instant_array) - 1:
+            if idx_tx_instant < len(tx_instant_array): # If there are transmissions to do
                 current_tx_instant = tx_instant_array[idx_tx_instant] + d_delay_array[idx_tx_instant]
                 tx_arrival = current_tx_instant + t_delay_array[idx_tx_instant]
-            else:
+            else: # If the transmissions are finished
                 current_tx_instant = 1
                 tx_arrival = 1e10
+
         
         # Save AoI for the current iteration of the simulation
         aoi_history[i] = current_aoi
@@ -256,7 +256,6 @@ def simulation(L : int, M : int, average_d :float, d_type : str, average_t :floa
         current_aoi += simulation_step
         simulation_time += simulation_step
     
-    # print(tx_instant_array)
     return aoi_history, current_tx_instant
 
 @jit(nopython = True, parallel = False)
@@ -295,8 +294,9 @@ def compute_transmission_instant(y_array):
             t_i = y_array[i] + tx_instant_array[i - 1]
 
         tx_instant_array[i] = t_i
-
-    return tx_instant_array
+    
+    # Return all the transmission instant apart from the last one that is a 1
+    return tx_instant_array[0:-1]
 
 @jit(nopython = True, parallel = False)
 def sample_distribution(distribution_average : float, distribution_type : str, size : int):
@@ -316,7 +316,7 @@ def sample_distribution(distribution_average : float, distribution_type : str, s
 def compute_aoi_simulation_multiple_value(config : dict, print_var = False):
     d_values = config['d_values']
     t_values = config['t_values']
-    results = np.zeros((len(config['M_list']), len(t_values)))
+    results = np.zeros((len(config['M_list']), len(d_values), len(t_values)))
 
     for i in range(len(config['M_list'])): # Iterate through number of tx
         M = config['M_list'][i]
@@ -324,13 +324,17 @@ def compute_aoi_simulation_multiple_value(config : dict, print_var = False):
         for j in range(len(d_values)): # Iterate through different values of D delay
             D = d_values[j]
             for k in range(len(t_values)): # Iterate through different values of T delay
-                if print_var: print("{} M_list - {} d_values - {} t_values".format(round(i / len(config['M_list']), 2) * 100), round(j / len(config['d_values']), 2) * 100, round(k / len(config['t_values']), 2) * 100)
                 T = t_values[k]
+                if print_var: 
+                    M_percentage = round((i + 1) / len(config['M_list']) * 100)
+                    d_percentage = round((j + 1) / len(config['d_values']) * 100)
+                    t_percentage = round((k + 1) / len(config['t_values']) * 100)
+                    print("{}% M_list ({})\t {}% d_values ({})\t {}% t_values ({})".format(M_percentage, M, d_percentage, D, t_percentage, T))
 
                 results[i, j, k] = aoi_simulation(config['L'], M, D, config['d_type'], T, config['t_type'], config['repeat_simulation'], config['integration_type'])
         
         # Save the results after each iteration through the M list
-        with open('results.npy', 'wb') as f:
+        with open('results_simulation.npy', 'wb') as f:
             np.save(f, results)
 
     return results

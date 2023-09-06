@@ -27,7 +27,7 @@ def get_plot_config():
         # Common parameters
         figsize = (15, 10),
         fontsize = 20,
-        save_fig = True,
+        save_fig = False,
         # - - - - - - - - - - - - -
         # Parameters for aoi surface
         use_imshow = False,
@@ -482,7 +482,7 @@ def plot_single_delay(results_uu, results_ee, config, delay_type):
     
     plt.show()
 
-def plot_delay_comparison(results, config_computation : dict, max_delay : float = 0.08, idx_M :int = 0):
+def plot_delay_comparison(results, config_computation : dict, max_delay : float = 0.08, idx_M : int = 0):
     """
     Create a plot with 3 line: only D delay, only T delay, equal combination of D + T delay (D/2 + T/2)
     
@@ -496,8 +496,8 @@ def plot_delay_comparison(results, config_computation : dict, max_delay : float 
     # Compute values used for the plot
 
     # Compute d-values and t-values
-    d_values = np.geomspace(0.005, config_computation['max_d_delay'], config_computation['d_points'])
-    t_values = np.geomspace(0.005, config_computation['max_t_delay'], config_computation['t_points'])
+    d_values = np.geomspace(0.005, config_computation['d_max_delay'], config_computation['d_points'])
+    t_values = np.geomspace(0.005, config_computation['t_max_delay'], config_computation['t_points'])
     
     # Indices for the combined delay and valued of the combined delay
     idx_both_delays = np.zeros(results.shape)
