@@ -260,14 +260,14 @@ def simulation(L : int, M : int, average_d :float, d_type : str, average_t :floa
     return aoi_history, current_tx_instant
 
 @jit(nopython = True, parallel = False)
-def aoi_simulation(L : int, M : int, T : float, t_type: str, repeat_simulation : int = 1, integration_type : int = 0):
+def aoi_simulation(L : int, M : int, D : float, d_type : str, T : float, t_type: str, repeat_simulation : int = 1, integration_type : int = 0):
     tmp_results = np.zeros(repeat_simulation)
     for k in range(repeat_simulation):
         last_tx_instant = 0
         i = 0
         while last_tx_instant != 1:
             i+=1
-            aoi_history, last_tx_instant = simulation(L, M, T, t_type)
+            aoi_history, last_tx_instant = simulation(L, M, D, d_type, T, t_type)
 
         if integration_type == 0: aoi_average = np.mean(aoi_history)
         elif integration_type == 1: aoi_average = np.trapz(aoi_history, np.linspace(0, 1, len(aoi_history)))
@@ -313,16 +313,24 @@ def sample_distribution(distribution_average : float, distribution_type : str, s
     return x
 
 
-def compute_aoi_simulation_multiple_value(config : dict):
+def compute_aoi_simulation_multiple_value(config : dict, print_var = False):
+    d_values = config['d_values']
     t_values = config['t_values']
     results = np.zeros((len(config['M_list']), len(t_values)))
 
     for i in range(len(config['M_list'])): # Iterate through number of tx
         M = config['M_list'][i]
         if config['print_var']: print("Simulation M = {}".format(M))
-        for j in range(len(t_values)): # Iterate through different values of T delay
-            T = t_values[j]
+        for j in range(len(d_values)): # Iterate through different values of D delay
+            D = d_values[j]
+            for k in range(len(t_values)): # Iterate through different values of T delay
+                if print_var: print("{} M_list - {} d_values - {} t_values".format(round(i / len(config['M_list']), 2) * 100), round(j / len(config['d_values']), 2) * 100, round(k / len(config['t_values']), 2) * 100)
+                T = t_values[k]
 
-            results[i, j] = aoi_simulation(config['L'], M, T, config['t_type'], config['repeat_simulation'], config['integration_type'])
+                results[i, j, k] = aoi_simulation(config['L'], M, D, config['d_type'], T, config['t_type'], config['repeat_simulation'], config['integration_type'])
+        
+        # Save the results after each iteration through the M list
+        with open('results.npy', 'wb') as f:
+            np.save(f, results)
 
     return results
