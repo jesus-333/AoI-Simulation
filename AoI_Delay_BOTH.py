@@ -25,11 +25,11 @@ def get_config_computation():
         # Parameter for both theory and simulation
         d_points = 100,
         d_type = 'uniform',
-        d_min_delay = 0.005,
+        d_min_delay = 0.001,
         d_max_delay = 0.15,
         t_points = 100,
         t_type = 'uniform',
-        t_min_delay = 0.005,
+        t_min_delay = 0.001,
         t_max_delay = 0.15,
         M_list = [4, 5],
         # M_list = np.arange(3, 20),
@@ -45,6 +45,8 @@ def get_config_computation():
 
     config['d_values'] = np.geomspace(config['d_min_delay'], config['d_max_delay'], config['d_points'])
     config['t_values'] = np.geomspace(config['t_min_delay'], config['t_max_delay'], config['t_points'])
+    # config['d_values'] = np.insert(np.geomspace(config['d_min_delay'], config['d_max_delay'], config['d_points']), 0, 0)
+    # config['t_values'] = np.insert(np.geomspace(config['t_min_delay'], config['t_max_delay'], config['t_points']), 0, 0)
 
     return config
 
@@ -133,7 +135,7 @@ def probability_overflow(M : int, D : float, T : float, d_type : str, t_type : s
     return prob
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-# Theory. Computation multiple values and similar stuff
+# Theory computation multiple values and similar stuff
 
 def compute_aoi_theory_multiple_value(config : dict):
     d_values = config['d_values']

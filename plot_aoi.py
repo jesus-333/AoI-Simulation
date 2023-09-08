@@ -11,6 +11,7 @@ Functions used to plot the AoI obtained from the simulation or other figures to 
 import numpy as np
 import matplotlib.pyplot as plt
 
+import AoI_Delay_BOTH
 
 """
 %load_ext autoreload
@@ -27,7 +28,9 @@ def get_plot_config():
         # Common parameters
         figsize = (15, 10),
         fontsize = 20,
-        save_fig = False,
+        markersize = 7,
+        markevery = 5,
+        save_fig = True,
         # - - - - - - - - - - - - -
         # Parameters for aoi surface
         use_imshow = False,
@@ -486,7 +489,7 @@ def plot_delay_comparison(results, config_computation : dict, max_delay : float 
     """
     Create a plot with 3 line: only D delay, only T delay, equal combination of D + T delay (D/2 + T/2)
     
-    results: numpy array of dimensions possible_tx x D x T (see AoI_delay.py for the output dimension)
+    results: numpy array of dimensions M x D x T 
     config_computation: dictionary with the config used for the computation
     max_delay: max value of the combination of the two delay
     idx_M: index of the first dimension of the results matrix.
@@ -517,9 +520,9 @@ def plot_delay_comparison(results, config_computation : dict, max_delay : float 
     fig, ax = plt.subplots(1, 1, figsize = config['figsize']) 
     plt.rcParams.update({'font.size': config['fontsize']})
     
-    ax.plot(delay_values, both_delay, label = "Both Delay")
-    ax.plot(d_values[idx_single_delay_d], only_D, label = "Only D delay")
-    ax.plot(t_values[idx_single_delay_t], only_T, label = "Only T delay")
+    ax.plot(delay_values, both_delay, label = "Both Delay (theory)", color = 'red', marker = "o", markevery = config['markevery'], markersize = config['markersize'])
+    ax.plot(d_values[idx_single_delay_d], only_D, label = "Only D delay (theory)", color = 'skyblue', marker = "x", markevery = config['markevery'], markersize = config['markersize'])
+    ax.plot(t_values[idx_single_delay_t], only_T, label = "Only T delay (theory)", color = 'green', marker = "v", markevery = config['markevery'], markersize = config['markersize'])
 
     # Axis stuff
     ax.set_xscale('log')
@@ -583,3 +586,211 @@ def plot_delay_theory_vs_sim_single_delay(results_theory, results_sim, delay_dis
     plt.legend()
     plt.title("Only {} Delay ({})".format(delay_type, delay_distribution))
     plt.show()
+
+def plot_delay_theory_vs_sim_both_delays(results_theory, results_sim, config_computation : dict, max_delay : float = 0.08, idx_M : int = 0):
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
+    # Compute values used for the plot
+
+    # Compute d-values and t-values
+    d_values = np.geomspace(0.005, config_computation['d_max_delay'], config_computation['d_points'])
+    t_values = np.geomspace(0.005, config_computation['t_max_delay'], config_computation['t_points'])
+    
+    # Indices for the combined delay and valued of the combined delay
+    idx_both_delays = np.zeros(results_theory.shape)
+    idx_both_delays, delay_values = compute_idx_both_delays(idx_both_delays, d_values, t_values, max_delay, idx_M)
+    both_delay_theory = results_theory[idx_both_delays]
+    both_delay_sim = results_sim[idx_both_delays]
+    
+    idx_single_delay_d = np.logical_and(d_values >= min(delay_values), d_values <= max(delay_values))
+    idx_single_delay_t = np.logical_and(t_values >= min(delay_values), t_values <= max(delay_values))
+
+    only_D_theory = results_theory[idx_M, idx_single_delay_d, 0]
+    only_T_theory = results_theory[idx_M, 0, idx_single_delay_t]
+    only_D_sim = results_sim[idx_M, idx_single_delay_d, 0]
+    only_T_sim = results_sim[idx_M, 0, idx_single_delay_t]
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+    # Plot the figure
+
+    config = get_plot_config()
+    
+    fig, ax = plt.subplots(1, 1, figsize = config['figsize']) 
+    plt.rcParams.update({'font.size': config['fontsize']})
+    
+    ax.plot(delay_values, both_delay_theory, label = "Both Delay (theory)", color = 'red', marker = "o", markevery = config['markevery'], markersize = config['markersize'])
+    ax.plot(d_values[idx_single_delay_d], only_D_theory, label = "Only D delay (theory)", color = 'skyblue', marker = "x", markevery = config['markevery'], markersize = config['markersize'])
+    ax.plot(t_values[idx_single_delay_t], only_T_theory, label = "Only T delay (theory)", color = 'green', marker = "v", markevery = config['markevery'], markersize = config['markersize'])
+
+    ax.plot(delay_values, both_delay_sim, label = "Both Delay (sim)", color = 'darkred', marker = "^", markevery = config['markevery'], markersize = config['markersize'])
+    ax.plot(d_values[idx_single_delay_d], only_D_sim, label = "Only D delay (sim)", color = 'royalblue', marker = "8", markevery = config['markevery'], markersize = config['markersize'])
+    ax.plot(t_values[idx_single_delay_t], only_T_sim, label = "Only T delay (sim)", color = 'darkgreen', marker = "s", markevery = config['markevery'], markersize = config['markersize'])
+
+    # Axis stuff
+    ax.set_xscale('log')
+    xlim = [max(min(d_values[idx_single_delay_d]), min(delay_values)),min(max(d_values[idx_single_delay_d]), max(delay_values))]
+    ax.set_xlim(xlim)
+    ticks = np.round(np.geomspace(xlim[0], xlim[-1], 8), 3)
+    print(ticks)
+    ax.set_xticks(ticks, labels = ticks, minor = False)
+    ax.set_xticks(ticks, labels = ticks,minor = True)
+    ax.grid(True, 'major')
+    
+    # Legend and label
+    ax.set_xlabel("Average Delay")
+    ax.set_ylabel("Average AoI")
+    ax.legend()
+
+    fig.tight_layout()
+    
+    if config['save_fig']:
+        name = "delay_comparison_with_simulation"
+
+        file_type = 'eps'
+        filename = "Plot/delay/{}.{}".format(name, file_type)
+        plt.savefig(filename, format=file_type)
+
+        file_type = 'png'
+        filename = "Plot/delay/{}.{}".format(name, file_type)
+        plt.savefig(filename, format=file_type)
+    
+    plt.show()
+
+
+def plot_both_delay_different_distribution(results_uniform, results_exp, config_computation, max_delay, idx_M):
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
+    # Compute values used for the plot
+
+    # Compute d-values and t-values
+    d_values = np.geomspace(0.005, config_computation['d_max_delay'], config_computation['d_points'])
+    t_values = np.geomspace(0.005, config_computation['t_max_delay'], config_computation['t_points'])
+    
+    # Indices for the combined delay and valued of the combined delay
+    idx_both_delays = np.zeros(results_uniform.shape)
+    idx_both_delays, delay_values = compute_idx_both_delays(idx_both_delays, d_values, t_values, max_delay, idx_M)
+    both_delay_uniform = results_uniform[idx_both_delays]
+    both_delay_exp = results_exp[idx_both_delays]
+    
+    idx_single_delay_d = np.logical_and(d_values >= min(delay_values), d_values <= max(delay_values))
+    idx_single_delay_t = np.logical_and(t_values >= min(delay_values), t_values <= max(delay_values))
+
+    only_D_uniform = results_uniform[idx_M, idx_single_delay_d, 0]
+    only_T_uniform = results_uniform[idx_M, 0, idx_single_delay_t]
+    only_D_exp = results_exp[idx_M, idx_single_delay_d, 0]
+    only_T_exp = results_exp[idx_M, 0, idx_single_delay_t]
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+    plot_config = get_plot_config()
+
+    fig, ax = plt.subplots(1, 1, figsize = plot_config['figsize'])
+    plt.rcParams.update({'font.size': plot_config['fontsize']})
+
+    ax.plot(delay_values, both_delay_uniform, label = "Both Delay (uniform)", color = 'red', marker = "o", markevery = plot_config['markevery'], markersize = plot_config['markersize'])
+    ax.plot(d_values[idx_single_delay_d], only_D_uniform, label = "Only D delay (uniform)", color = 'skyblue', marker = "x", markevery = plot_config['markevery'], markersize = plot_config['markersize'])
+    ax.plot(t_values[idx_single_delay_t], only_T_uniform, label = "Only T delay (uniform)", color = 'green', marker = "v", markevery = plot_config['markevery'], markersize = plot_config['markersize'])
+
+    ax.plot(delay_values, both_delay_exp, label = "Both Delay (exp)", color = 'darkred', marker = "^", markevery = plot_config['markevery'], markersize = plot_config['markersize'])
+    ax.plot(d_values[idx_single_delay_d], only_D_exp, label = "Only D delay (exp)", color = 'royalblue', marker = "8", markevery = plot_config['markevery'], markersize = plot_config['markersize'])
+    ax.plot(t_values[idx_single_delay_t], only_T_exp, label = "Only T delay (exp)", color = 'darkgreen', marker = "s", markevery = plot_config['markevery'], markersize = plot_config['markersize'])
+
+    # Axis stuff
+    ax.set_xscale('log')
+    xlim = [max(min(d_values[idx_single_delay_d]), min(delay_values)),min(max(d_values[idx_single_delay_d]), max(delay_values))]
+    ax.set_xlim(xlim)
+    ticks = np.round(np.geomspace(xlim[0], xlim[-1], 8), 3)
+    print(ticks)
+    ax.set_xticks(ticks, labels = ticks, minor = False)
+    ax.set_xticks(ticks, labels = ticks,minor = True)
+    ax.grid(True, 'major')
+    
+    # Legend and label
+    ax.set_xlabel("Average Delay")
+    ax.set_ylabel("Average AoI")
+    ax.legend()
+
+    fig.tight_layout()
+    
+    if plot_config['save_fig']:
+        name = "both_delay_different_distribution"
+
+        file_type = 'eps'
+        filename = "Plot/delay/{}.{}".format(name, file_type)
+        plt.savefig(filename, format=file_type)
+
+        file_type = 'png'
+        filename = "Plot/delay/{}.{}".format(name, file_type)
+        plt.savefig(filename, format=file_type)
+    
+    plt.show()
+
+def ratio_aoi_with_no_delay(results, config_computation : dict, max_delay : float = 0.08):
+    """
+    Create a plot with 3 line: only D delay, only T delay, equal combination of D + T delay (D/2 + T/2)
+    
+    results: numpy array of dimensions M x D x T 
+    config_computation: dictionary with the config used for the computation
+    max_delay: max value of the combination of the two delay
+    idx_M: index of the first dimension of the results matrix.
+    """
+    
+    for i in range(len(config_computation['M_list'])):
+        normalization_factor = AoI_Delay_BOTH.aoi_theory_formula(config_computation['M_list'][i], 0, 0, 'uniform')
+
+        normalized_results = results / normalization_factor
+
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
+        # Compute values used for the plot
+
+        # Compute d-values and t-values
+        d_values = np.geomspace(0.005, config_computation['d_max_delay'], config_computation['d_points'])
+        t_values = np.geomspace(0.005, config_computation['t_max_delay'], config_computation['t_points'])
+        
+        # Indices for the combined delay and valued of the combined delay
+        idx_both_delays = np.zeros(results.shape)
+        idx_both_delays, delay_values= compute_idx_both_delays(idx_both_delays, d_values, t_values, max_delay, idx_M)
+        both_delay = results[idx_both_delays]
+        
+        idx_single_delay_d = np.logical_and(d_values >= min(delay_values), d_values <= max(delay_values))
+        idx_single_delay_t = np.logical_and(t_values >= min(delay_values), t_values <= max(delay_values))
+
+        only_D = results[idx_M, idx_single_delay_d, 0]
+        only_T = results[idx_M, 0, idx_single_delay_t]
+        
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
+        # Plot 
+        config = get_plot_config()
+        
+        fig, ax = plt.subplots(1, 1, figsize = config['figsize']) 
+        plt.rcParams.update({'font.size': config['fontsize']})
+        
+        ax.plot(delay_values, both_delay, label = "Both Delay (theory)", color = 'red', marker = "o", markevery = config['markevery'], markersize = config['markersize'])
+        ax.plot(d_values[idx_single_delay_d], only_D, label = "Only D delay (theory)", color = 'skyblue', marker = "x", markevery = config['markevery'], markersize = config['markersize'])
+        ax.plot(t_values[idx_single_delay_t], only_T, label = "Only T delay (theory)", color = 'green', marker = "v", markevery = config['markevery'], markersize = config['markersize'])
+
+        # Axis stuff
+        ax.set_xscale('log')
+        ticks = [0.011, 0.015, 0.02, 0.03, 0.045, 0.07]
+        ax.set_xticks(ticks, labels = ticks, minor = False)
+        ax.set_xticks(ticks, labels = ticks,minor = True)
+        xlim = [max(min(d_values[idx_single_delay_d]), min(delay_values)),min(max(d_values[idx_single_delay_d]), max(delay_values))]
+        ax.set_xlim(xlim)
+        ax.grid(True, 'major')
+        
+        # Legend and label
+        ax.set_xlabel("Average Delay")
+        ax.set_ylabel("Average AoI")
+        ax.legend()
+
+        fig.tight_layout()
+        
+        if config['save_fig']:
+            name = "delay_comparison"
+            file_type = 'eps'
+            filename = "Plot/delay/{}.{}".format(name, file_type)
+            plt.savefig(filename, format=file_type)
+
+            file_type = 'png'
+            filename = "Plot/delay/{}.{}".format(name, file_type)
+            plt.savefig(filename, format=file_type)
+        
+        plt.show()
+
