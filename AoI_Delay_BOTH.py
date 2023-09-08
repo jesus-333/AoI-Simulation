@@ -31,7 +31,7 @@ def get_config_computation():
         t_type = 'uniform',
         t_min_delay = 0.005,
         t_max_delay = 0.15,
-        M_list = [4, 5, 8, 10],
+        M_list = [4, 5],
         # M_list = np.arange(3, 20),
         # Parameter only for the simulation 
         use_sum_for_theory = False,
@@ -179,18 +179,23 @@ def compare_aoi_formula():
         ax[0].plot(d_values, results_formula[i, :, idx_0], label = M_list[i])
         ax[0].plot(d_values, results_sum[i, :, idx_0], label = M_list[i])
         ax[0].set_xlabel('D Delay')
+        ax[0].set_title("Change D delay with T = {}".format(t_values[idx_0]))
 
         idx_1 = np.random.randint(results_formula.shape[1])
         ax[1].plot(t_values, results_formula[i, idx_1, :], label = M_list[i])
         ax[1].plot(t_values, results_sum[i, idx_1, :], label = M_list[i])
         ax[1].set_xlabel('T Delay')
+        ax[1].set_title("Change T delay with D = {}".format(d_values[idx_1]))
 
     for i in range(len(ax)):
         ax[i].set_xscale('log')
         ax[i].grid(True)
         ax[i].legend()
+
     fig.tight_layout()
     fig.show()
+
+    print("Average difference between sum and exact formula: ", np.mean(results_sum - results_formula))
 
 
 def compute_probability_overflow_multiple_value(config : dict):
