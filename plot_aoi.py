@@ -732,6 +732,11 @@ def ratio_aoi_with_no_delay(results, config_computation : dict, max_delay : floa
     idx_M: index of the first dimension of the results matrix.
     """
     
+    config = get_plot_config()
+        
+    fig, ax = plt.subplots(1, 1, figsize = config['figsize']) 
+    plt.rcParams.update({'font.size': config['fontsize']})
+
     for i in range(len(config_computation['M_list'])):
         normalization_factor = AoI_Delay_BOTH.aoi_theory_formula(config_computation['M_list'][i], 0, 0, 'uniform')
 
@@ -746,51 +751,50 @@ def ratio_aoi_with_no_delay(results, config_computation : dict, max_delay : floa
         
         # Indices for the combined delay and valued of the combined delay
         idx_both_delays = np.zeros(results.shape)
-        idx_both_delays, delay_values= compute_idx_both_delays(idx_both_delays, d_values, t_values, max_delay, idx_M)
-        both_delay = results[idx_both_delays]
+        idx_both_delays, delay_values= compute_idx_both_delays(idx_both_delays, d_values, t_values, max_delay,i)
+        both_delay = normalized_results[idx_both_delays]
         
         idx_single_delay_d = np.logical_and(d_values >= min(delay_values), d_values <= max(delay_values))
         idx_single_delay_t = np.logical_and(t_values >= min(delay_values), t_values <= max(delay_values))
 
-        only_D = results[idx_M, idx_single_delay_d, 0]
-        only_T = results[idx_M, 0, idx_single_delay_t]
+        only_D = normalized_results[i, idx_single_delay_d, 0]
+        only_T = normalized_results[i, 0, idx_single_delay_t]
+
+        color_list = [['red', 'skyblue', 'green'], ['darkred', 'royalblue', 'darkgreen']]
+        marker_list = [["o", "x", "v"], ["^", "8", "s"]]
         
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
         # Plot 
-        config = get_plot_config()
         
-        fig, ax = plt.subplots(1, 1, figsize = config['figsize']) 
-        plt.rcParams.update({'font.size': config['fontsize']})
-        
-        ax.plot(delay_values, both_delay, label = "Both Delay (theory)", color = 'red', marker = "o", markevery = config['markevery'], markersize = config['markersize'])
-        ax.plot(d_values[idx_single_delay_d], only_D, label = "Only D delay (theory)", color = 'skyblue', marker = "x", markevery = config['markevery'], markersize = config['markersize'])
-        ax.plot(t_values[idx_single_delay_t], only_T, label = "Only T delay (theory)", color = 'green', marker = "v", markevery = config['markevery'], markersize = config['markersize'])
+        ax.plot(delay_values, both_delay, label = "Both Delay (M = {})".format(config_computation['M_list'][i]), color = color_list[i][0], marker = marker_list[i][0], markevery = config['markevery'], markersize = config['markersize'])
+        ax.plot(d_values[idx_single_delay_d], only_D, label = "Only D delay (M = {})".format(config_computation['M_list'][i]), color = color_list[i][1], marker = marker_list[i][1], markevery = config['markevery'], markersize = config['markersize'])
+        ax.plot(t_values[idx_single_delay_t], only_T, label = "Only T delay (M = {})".format(config_computation['M_list'][i]), color = color_list[i][2], marker = marker_list[i][2], markevery = config['markevery'], markersize = config['markersize'])
 
-        # Axis stuff
-        ax.set_xscale('log')
-        ticks = [0.011, 0.015, 0.02, 0.03, 0.045, 0.07]
-        ax.set_xticks(ticks, labels = ticks, minor = False)
-        ax.set_xticks(ticks, labels = ticks,minor = True)
-        xlim = [max(min(d_values[idx_single_delay_d]), min(delay_values)),min(max(d_values[idx_single_delay_d]), max(delay_values))]
-        ax.set_xlim(xlim)
-        ax.grid(True, 'major')
-        
-        # Legend and label
-        ax.set_xlabel("Average Delay")
-        ax.set_ylabel("Average AoI")
-        ax.legend()
+    # Axis stuff
+    ax.set_xscale('log')
+    ticks = [0.011, 0.015, 0.02, 0.03, 0.045, 0.07]
+    ax.set_xticks(ticks, labels = ticks, minor = False)
+    ax.set_xticks(ticks, labels = ticks,minor = True)
+    xlim = [max(min(d_values[idx_single_delay_d]), min(delay_values)),min(max(d_values[idx_single_delay_d]), max(delay_values))]
+    ax.set_xlim(xlim)
+    ax.grid(True, 'major')
+    
+    # Legend and label
+    ax.set_xlabel("Average Delay")
+    ax.set_ylabel("Average AoI")
+    ax.legend()
 
-        fig.tight_layout()
-        
-        if config['save_fig']:
-            name = "delay_comparison"
-            file_type = 'eps'
-            filename = "Plot/delay/{}.{}".format(name, file_type)
-            plt.savefig(filename, format=file_type)
+    fig.tight_layout()
+    
+    if config['save_fig']:
+        name = "delay_comparison"
+        file_type = 'eps'
+        filename = "Plot/delay/{}.{}".format(name, file_type)
+        plt.savefig(filename, format=file_type)
 
-            file_type = 'png'
-            filename = "Plot/delay/{}.{}".format(name, file_type)
-            plt.savefig(filename, format=file_type)
+        file_type = 'png'
+        filename = "Plot/delay/{}.{}".format(name, file_type)
+        plt.savefig(filename, format=file_type)
         
-        plt.show()
+    fig.show()
 
