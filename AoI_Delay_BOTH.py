@@ -26,11 +26,11 @@ def get_config_computation():
         d_points = 100,
         d_type = 'uniform',
         d_min_delay = 0.001,
-        d_max_delay = 0.15,
+        d_max_delay = 0.08,
         t_points = 100,
         t_type = 'uniform',
         t_min_delay = 0.001,
-        t_max_delay = 0.15,
+        t_max_delay = 0.08,
         M_list = [4, 5],
         # M_list = np.arange(3, 20),
         # Parameter only for the simulation 
@@ -38,7 +38,7 @@ def get_config_computation():
         compute_not_optimized = False,
         L = 500, # Number of simulation step. Used only for the simulation
         integration_type = 1, # used only for the simulation
-        repeat_simulation = 100, # Number of time each simulation is repeated
+        repeat_simulation = 200, # Number of time each simulation is repeated
         # Other
         print_var = False,
     )
@@ -280,7 +280,7 @@ def aoi_simulation(L : int, M : int, D : float, d_type : str, T : float, t_type:
 
         tmp_results[k] = aoi_average
 
-    return np.mean(tmp_results)
+    return np.mean(tmp_results), np.std(tmp_results)
 
 @jit(nopython = True, parallel = False)
 def compute_transmission_instant(y_array):
@@ -323,7 +323,8 @@ def sample_distribution(distribution_average : float, distribution_type : str, s
 def compute_aoi_simulation_multiple_value(config : dict, print_var = False):
     d_values = config['d_values']
     t_values = config['t_values']
-    results = np.zeros((len(config['M_list']), len(d_values), len(t_values)))
+    results_average = np.zeros((len(config['M_list']), len(d_values), len(t_values)))
+    results_std = np.zeros((len(config['M_list']), len(d_values), len(t_values)))
 
     for i in range(len(config['M_list'])): # Iterate through number of tx
         M = config['M_list'][i]
@@ -338,10 +339,12 @@ def compute_aoi_simulation_multiple_value(config : dict, print_var = False):
                     t_percentage = round((k + 1) / len(config['t_values']) * 100)
                     print("{}% M_list ({})\t {}% d_values ({})\t {}% t_values ({})".format(M_percentage, M, d_percentage, D, t_percentage, T))
 
-                results[i, j, k] = aoi_simulation(config['L'], M, D, config['d_type'], T, config['t_type'], config['repeat_simulation'], config['integration_type'])
+                results_average[i, j, k], results_std[i, j, k] = aoi_simulation(config['L'], M, D, config['d_type'], T, config['t_type'], config['repeat_simulation'], config['integration_type'])
         
         # Save the results after each iteration through the M list
-        with open('results_simulation.npy', 'wb') as f:
-            np.save(f, results)
+        with open('results_simulation_average.npy', 'wb') as f:
+            np.save(f, results_average)
+        with open('results_simulation_std.npy', 'wb') as f:
+            np.save(f, results_std)
 
-    return results
+    return results_average, results_std
