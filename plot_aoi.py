@@ -894,7 +894,7 @@ def change_proportion(results, config_computation : dict, fixed_values_list : li
             fixed_value = fixed_values_list[j]
 
 
-def find_aoi_for_chagen_proportion_function(results, config_computation : dict, fixed_value : float, alpha_list):
+def compute_aoi_for_chagen_proportion_function(config_computation : dict, fixed_value : float, alpha_list):
     """
     Find the AoI for each value of the linear combination a * D + (1 - a) + T
     results : matrix of shape D x T
@@ -906,15 +906,12 @@ def find_aoi_for_chagen_proportion_function(results, config_computation : dict, 
     # Compute d-values and t-values
     d_values = np.geomspace(0.005, config_computation['d_max_delay'], config_computation['d_points'])
     t_values = np.geomspace(0.005, config_computation['t_max_delay'], config_computation['t_points'])
-    for i in range(len(d_values)):
-        for k in range(len(t_values)):
-            pass
     
-    aoi_list = []
-    for alpha in alpha_list:
-        delays_sum = alpha * d_values + (1 - alpha) * t_values
+    aoi_list = np.zeros((len(config_computation['M_list'], len(alpha_list))))
+    for i in range(len(config_computation['M_list'])):
+        for alpha in alpha_list:
+            delays_sum = alpha * d_values + (1 - alpha) * t_values
         
-        closest_idx = np.unravel_index(np.argmin(delays_sum - fixed_value), delays_sum.shape)
 
         
         
