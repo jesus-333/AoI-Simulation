@@ -521,7 +521,7 @@ def plot_delay_comparison(results, config_computation : dict, max_delay : float 
     plt.rcParams.update({'font.size': config['fontsize']})
     
     ax.plot(delay_values, both_delay, label = "Both delays (theory)", color = 'red', marker = "o", markevery = config['markevery'], markersize = config['markersize'])
-    ax.plot(d_values[idx_single_delay_d], only_D, label = "Only D delay (theory)", color = 'skyblue', marker = "x", markevery = config['markevery'], markersize = config['markersize'])
+    ax.plot(d_values[idx_single_delay_d], only_D, label = "Only D delay (theory)", color = 'darkturquoise', marker = "x", markevery = config['markevery'], markersize = config['markersize'])
     ax.plot(t_values[idx_single_delay_t], only_T, label = "Only T delay (theory)", color = 'green', marker = "v", markevery = config['markevery'], markersize = config['markersize'])
 
     # Axis stuff
@@ -621,7 +621,7 @@ def plot_delay_theory_vs_sim_both_delays(results_theory, results_sim_average, re
     fig, ax = plt.subplots(1, 1, figsize = config['figsize']) 
     
     ax.plot(delay_values, both_delay_theory, label = "Both delays (theory)", color = 'red', marker = "o", markevery = config['markevery'], markersize = config['markersize'])
-    ax.plot(d_values[idx_single_delay_d], only_D_theory, label = "Only D delay (theory)", color = 'skyblue', marker = "x", markevery = config['markevery'], markersize = config['markersize'])
+    ax.plot(d_values[idx_single_delay_d], only_D_theory, label = "Only D delay (theory)", color = 'darkturquoise', marker = "x", markevery = config['markevery'], markersize = config['markersize'])
     ax.plot(t_values[idx_single_delay_t], only_T_theory, label = "Only T delay (theory)", color = 'green', marker = "v", markevery = config['markevery'], markersize = config['markersize'])
 
     # ax.plot(delay_values, both_delay_sim, label = "Both delays (sim)", color = 'darkred', marker = "^", markevery = config['markevery'], markersize = config['markersize'])
@@ -695,7 +695,7 @@ def plot_both_delay_different_distribution(results_uniform, results_exp, config_
     fig, ax = plt.subplots(1, 1, figsize = plot_config['figsize'])
 
     ax.plot(delay_values, both_delay_uniform, label = "Both delays (uniform)", color = 'red', marker = "o", markevery = plot_config['markevery'], markersize = plot_config['markersize'])
-    ax.plot(d_values[idx_single_delay_d], only_D_uniform, label = "Only D delay (uniform)", color = 'skyblue', marker = "x", markevery = plot_config['markevery'], markersize = plot_config['markersize'])
+    ax.plot(d_values[idx_single_delay_d], only_D_uniform, label = "Only D delay (uniform)", color = 'darkturquoise', marker = "x", markevery = plot_config['markevery'], markersize = plot_config['markersize'])
     ax.plot(t_values[idx_single_delay_t], only_T_uniform, label = "Only T delay (uniform)", color = 'green', marker = "v", markevery = plot_config['markevery'], markersize = plot_config['markersize'])
 
     ax.plot(delay_values, both_delay_exp, label = "Both delays (exp)", color = 'darkred', marker = "^", markevery = plot_config['markevery'], markersize = plot_config['markersize'])
@@ -772,7 +772,7 @@ def aoi_for_different_M(results, config_computation : dict, max_delay : float = 
         only_D = results_to_plot[i, idx_single_delay_d, 0]
         only_T = results_to_plot[i, 0, idx_single_delay_t]
 
-        color_list = [['red', 'skyblue', 'green'], ['darkred', 'royalblue', 'darkgreen']]
+        color_list = [['red', 'darkturquoise', 'green'], ['darkred', 'royalblue', 'darkgreen']]
         marker_list = [["o", "x", "v"], ["^", "8", "s"]]
         
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
@@ -841,7 +841,7 @@ def fix_one_delay(results, config_computation, fix_delay : float):
     plt.rcParams.update({'font.size': config_plot['fontsize']})
     fig, ax = plt.subplots(1, 1, figsize = config_plot['figsize']) 
 
-    color_list = [['skyblue', 'green'], ['royalblue', 'darkgreen']]
+    color_list = [['darkturquoise', 'green'], ['royalblue', 'darkgreen']]
     marker_list = [["x", "v"], ["8", "s"]]
 
     for i in range(len(config_computation['M_list'])):
@@ -893,7 +893,7 @@ def change_proportion(config_computation : dict, fixed_values_list : list):
     plt.rcParams.update({'font.size': config_plot['fontsize']})
     fig, ax = plt.subplots(1, 1, figsize = config_plot['figsize']) 
 
-    color_list = [['skyblue', 'green'], ['royalblue', 'darkgreen']]
+    color_list = [['darkturquoise', 'green'], ['royalblue', 'darkgreen']]
     marker_list = [["x", "v"], ["8", "s"]]
 
     for i in range(len(fixed_values_list)):
