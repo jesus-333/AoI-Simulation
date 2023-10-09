@@ -368,8 +368,8 @@ def plot_aoi_vs_T(results, config_computation, config_plot):
     
     ax.legend()
 
-    ax.set_ylabel("Average AoI")
-    ax.set_xlabel("Average Delay")
+    ax.set_ylabel(r"Average AoI ($\Delta$)")
+    ax.set_xlabel("Average Delay (E[T])")
     ax.set_xlim([t_values[0], t_values[-1]])
     if config_plot['use_log_scale']: ax.set_xscale('log') 
 
@@ -402,7 +402,7 @@ def plot_aoi_vs_M(results, config_computation, config_plot):
                 )
     ax.legend()
 
-    ax.set_ylabel("Average AoI")
+    ax.set_ylabel(r"Average AoI ($\Delta$)")
     ax.set_xlabel("Number of transmissions (M)")
     ax.set_xlim([M_values[0], M_values[-1]])
     ax.grid(True)
@@ -433,8 +433,9 @@ def plot_theory_vs_sim_delay_T(results_theory, results_sim, config_computation, 
     
     ax.legend()
 
-    ax.set_ylabel("Average AoI")
-    ax.set_xlabel("Average Delay")
+    ax.set_ylabel(r"Average AoI ($\Delta$)")
+    ax.set_xlabel("Average Delay (E[T])")
+    # ax.set_xlabel("Average Delay ($\mathbb{E}[T]$)")
     ax.set_xlim([t_values[0], t_values[-1]])
     if config_plot['use_log_scale']: ax.set_xscale('log') 
 
@@ -466,7 +467,7 @@ def plot_probability_overflow(results, config_computation, config_plot):
     ax.legend()
 
     ax.set_ylabel("Probability of overflow")
-    ax.set_xlabel("Average Delay")
+    ax.set_xlabel("Average Delay (E[T])")
     ax.set_xlim([t_values[0], t_values[-1]])
     # ax.set_ylim([0, 1])
     ax.grid(True)
@@ -500,8 +501,8 @@ def plot_optimized_vs_NOT_optimized(results_optimized, results_NOT_optimized, co
     if plot_ratio:
         ax.set_ylabel("Not optimized/Optimized AoI ratio")
     else:
-        ax.set_ylabel("Average AoI")
-    ax.set_xlabel("Average Delay")
+        ax.set_ylabel(r"Average AoI ($\Delta$)")
+    ax.set_xlabel("Average Delay (E[T])")
     ax.set_xlim([t_values[0], t_values[-1]])
     if config_plot['use_log_scale']: ax.set_xscale('log') 
 
