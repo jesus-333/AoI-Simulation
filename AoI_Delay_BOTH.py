@@ -2,7 +2,7 @@
 @Author: Alberto Zancanaro (Jesus)
 @Organization: University of Padua
 
-Simulation for the the AoI work with only propagation delay (T) 
+Simulation for the the AoI work with both activation delay (D) and propagation delay (T) 
 """
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -12,6 +12,8 @@ import numpy as np
 import time
 from numba import jit
 import matplotlib.pyplot as plt
+
+import plot_aoi
 
 """
 %load_ext autoreload
@@ -348,3 +350,100 @@ def compute_aoi_simulation_multiple_value(config : dict, print_var = False):
             np.save(f, results_std)
 
     return results_average, results_std
+
+
+def compute_aoi_for_chagen_proportion_function(config_computation : dict, fixed_value : float, alpha_list):
+    """
+    Find the AoI for each value of the linear combination a * D + (1 - a) + T (For different values of M)
+    Used for the plot function change_proportion.
+
+    Return a matrix of shape M x len(alpha_list) where for each M and each alpha you have the AoI for the linear combination of the two delays 
+    """
+
+    if config_computation['d_points'] != config_computation['t_points']:
+        raise ValueError("You have to compute the AoI on the same number of points for D and T (i.e. d_points must be equal to t_points)")
+
+    # Compute d-values and t-values
+    d_values = np.linspace(0, fixed_value * 1.05, 700)
+    t_values = np.linspace(0, fixed_value * 1.05, 700)
+
+    delays_sum =  compute_delay_combination(alpha_list, d_values, t_values)
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
+
+    aoi_matrix = np.zeros((len(config_computation['M_list']), len(alpha_list)))
+    for i in range(len(config_computation['M_list'])):
+        M = config_computation['M_list'][i]
+        for idx_alpha in range(len(alpha_list)):
+            alpha = alpha_list[idx_alpha]
+            mask = np.ones(delays_sum[idx_alpha, :, :].shape)
+            if alpha <= 0.5:
+                mask = np.rot90(np.tril(mask))
+            else:
+                mask = np.rot90(np.triu(mask))
+
+            difference_with_fixed_value = np.abs(delays_sum[idx_alpha, :, :] - fixed_value)  
+            idx_D, idx_T = np.unravel_index(np.argmin(difference_with_fixed_value), difference_with_fixed_value.shape)
+
+            D = d_values[idx_D]
+            T = t_values[idx_T]
+
+            print(alpha_list[idx_alpha], fixed_value)
+            print(alpha * D + (1 - alpha) * T) 
+            print("D: idx = {} - value = {}".format(idx_D, D))
+            print("T: idx = {} - value = {}\n".format(idx_T, T))
+
+            aoi_matrix[i, idx_alpha] = aoi_theory_formula(M, D, T, config_computation['d_type'])
+
+    return aoi_matrix
+
+@jit(nopython = True, parallel = False)
+def compute_delay_combination(alpha_list, d_values, t_values):
+    delays_sum = np.zeros((len(alpha_list), len(d_values), len(t_values)))
+    for i in range(len(alpha_list)):
+        alpha = alpha_list[i]
+        for j in range(len(d_values)):
+            D = d_values[j]
+            for k in range(len(t_values)):
+                T = t_values[k]
+                delays_sum[i, j, k] = alpha * D + (1 - alpha) * T
+
+    return delays_sum
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Function to run the simulation and create the plot
+
+def plot_sim_vs_theory(max_delay : float = 0.08, idx_M : int = 0):
+    config_computation = get_config_computation()
+
+    results_sim_avg, results_sim_std = compute_aoi_simulation_multiple_value(config_computation, True)
+    results_theory = compute_aoi_theory_multiple_value(config_computation)
+
+    plot_aoi.plot_delay_theory_vs_sim_both_delays(results_theory, results_sim_avg, results_sim_std, config_computation, max_delay, idx_M)
+
+def plot_distribution_difference(max_delay : float = 0.08, idx_M : int = 0):
+    config_computation = get_config_computation()
+
+    config_computation['d_type'] = 'uniform'
+    config_computation['t_type'] = 'uniform'
+    results_uniform = compute_aoi_theory_multiple_value(config_computation)
+
+    config_computation['d_type'] = 'exponential'
+    config_computation['t_type'] = 'exponential'
+    results_exp = compute_aoi_theory_multiple_value(config_computation)
+
+    plot_aoi.plot_both_delay_different_distribution(results_uniform, results_exp, config_computation, max_delay, idx_M)
+
+
+def plot_M_difference(max_delay : float = 0.08, idx_M : int = 0):
+    config_computation = get_config_computation()
+    results = compute_aoi_theory_multiple_value(config_computation)
+
+    plot_aoi.aoi_for_different_M(results, config_computation, max_delay, idx_M)
+
+def plot_fix_one_delay(fix_delay = 0.02):
+    config_computation = get_config_computation()
+    results = compute_aoi_theory_multiple_value(config_computation)
+
+    plot_aoi.fix_one_delay(results, config_computation, fix_delay)

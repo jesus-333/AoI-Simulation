@@ -27,8 +27,8 @@ def get_plot_config():
         # - - - - - - - - - - - - -
         # Common parameters
         figsize = (15, 10),
-        fontsize = 24,
-        markersize = 11,
+        fontsize = 28,
+        markersize = 15,
         markevery = 5,
         save_fig = True,
         # - - - - - - - - - - - - -
@@ -93,7 +93,7 @@ def plot_AoI_surface(p_tx_array, alpha_array, mean_age_surface):
         filename = "{}.{}".format(name, file_type)
         plt.savefig(filename, format=file_type)
 
-        file_type = 'eps'
+        file_type = 'pdf'
         filename = "{}.{}".format(name, file_type)
         plt.savefig(filename, format=file_type)
 
@@ -475,7 +475,7 @@ def plot_single_delay(results_uu, results_ee, config, delay_type):
     
     fig.tight_layout()
 
-    file_type = 'eps'
+    file_type = 'pdf'
     filename = "Plot/delay/{}.{}".format(name, file_type)
     plt.savefig(filename, format=file_type)
 
@@ -534,15 +534,15 @@ def plot_delay_comparison(results, config_computation : dict, max_delay : float 
     ax.grid(True, 'major')
     
     # Legend and label
-    ax.set_xlabel("Average Delay")
-    ax.set_ylabel("Average AoI")
+    ax.set_xlabel(r"Average Delay")
+    ax.set_ylabel(r"Average AoI ($\Delta$)")
     ax.legend()
 
     fig.tight_layout()
     
     if config['save_fig']:
         name = "delay_comparison"
-        file_type = 'eps'
+        file_type = 'pdf'
         filename = "Plot/delay/{}.{}".format(name, file_type)
         plt.savefig(filename, format=file_type)
 
@@ -582,7 +582,7 @@ def plot_delay_theory_vs_sim_single_delay(results_theory, results_sim, delay_dis
     
     ticks = [0.011, 0.015, 0.02, 0.03, 0.045, 0.07]
     plt.xlabel("Average Delay")
-    plt.ylabel("Average AoI")
+    plt.ylabel(r"Average AoI (\Delta)")
     plt.legend()
     plt.title("Only {} Delay ({})".format(delay_type, delay_distribution))
     plt.show()
@@ -647,7 +647,7 @@ def plot_delay_theory_vs_sim_both_delays(results_theory, results_sim_average, re
     
     # Legend and label
     ax.set_xlabel("Average Delay")
-    ax.set_ylabel("Average AoI")
+    ax.set_ylabel(r"Average AoI($\Delta$)")
     ax.legend()
 
     fig.tight_layout()
@@ -691,8 +691,8 @@ def plot_both_delay_different_distribution(results_uniform, results_exp, config_
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
     plot_config = get_plot_config()
 
-    fig, ax = plt.subplots(1, 1, figsize = plot_config['figsize'])
     plt.rcParams.update({'font.size': plot_config['fontsize']})
+    fig, ax = plt.subplots(1, 1, figsize = plot_config['figsize'])
 
     ax.plot(delay_values, both_delay_uniform, label = "Both delays (uniform)", color = 'red', marker = "o", markevery = plot_config['markevery'], markersize = plot_config['markersize'])
     ax.plot(d_values[idx_single_delay_d], only_D_uniform, label = "Only D delay (uniform)", color = 'skyblue', marker = "x", markevery = plot_config['markevery'], markersize = plot_config['markersize'])
@@ -711,10 +711,10 @@ def plot_both_delay_different_distribution(results_uniform, results_exp, config_
     ax.set_xticks(ticks, labels = ticks, minor = False)
     ax.set_xticks(ticks, labels = ticks,minor = True)
     ax.grid(True, 'major')
-    
+
     # Legend and label
     ax.set_xlabel("Average Delay")
-    ax.set_ylabel("Average AoI")
+    ax.set_ylabel(r"Average AoI($\Delta$)")
     ax.legend()
 
     fig.tight_layout()
@@ -722,7 +722,7 @@ def plot_both_delay_different_distribution(results_uniform, results_exp, config_
     if plot_config['save_fig']:
         name = "both_delay_different_distribution"
 
-        file_type = 'eps'
+        file_type = 'pdf'
         filename = "Plot/delay/{}.{}".format(name, file_type)
         plt.savefig(filename, format=file_type)
 
@@ -732,14 +732,14 @@ def plot_both_delay_different_distribution(results_uniform, results_exp, config_
     
     plt.show()
 
-def ratio_aoi_with_no_delay(results, config_computation : dict, max_delay : float = 0.08):
+def aoi_for_different_M(results, config_computation : dict, max_delay : float = 0.08, plot_ratio = False):
     """
     Create a plot with 3 line: only D delay, only T delay, equal combination of D + T delay (D/2 + T/2)
-    
+   
     results: numpy array of dimensions M x D x T 
     config_computation: dictionary with the config used for the computation
     max_delay: max value of the combination of the two delay
-    idx_M: index of the first dimension of the results matrix.
+    plot_ratio: If True plot the ration between aoi with no delay and aoi with delay
     """
     
     config = get_plot_config()
@@ -748,9 +748,11 @@ def ratio_aoi_with_no_delay(results, config_computation : dict, max_delay : floa
     fig, ax = plt.subplots(1, 1, figsize = config['figsize']) 
 
     for i in range(len(config_computation['M_list'])):
-        normalization_factor = AoI_Delay_BOTH.aoi_theory_formula(config_computation['M_list'][i], 0, 0, 'uniform')
-
-        normalized_results = results / normalization_factor
+        if plot_ratio:
+            normalization_factor = AoI_Delay_BOTH.aoi_theory_formula(config_computation['M_list'][i], 0, 0, 'uniform')
+            results_to_plot = results / normalization_factor
+        else:
+            results_to_plot = results
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
         # Compute values used for the plot
@@ -762,13 +764,13 @@ def ratio_aoi_with_no_delay(results, config_computation : dict, max_delay : floa
         # Indices for the combined delay and valued of the combined delay
         idx_both_delays = np.zeros(results.shape)
         idx_both_delays, delay_values= compute_idx_both_delays(idx_both_delays, d_values, t_values, max_delay,i)
-        both_delay = normalized_results[idx_both_delays]
+        both_delay = results_to_plot[idx_both_delays]
         
         idx_single_delay_d = np.logical_and(d_values >= min(delay_values), d_values <= max(delay_values))
         idx_single_delay_t = np.logical_and(t_values >= min(delay_values), t_values <= max(delay_values))
 
-        only_D = normalized_results[i, idx_single_delay_d, 0]
-        only_T = normalized_results[i, 0, idx_single_delay_t]
+        only_D = results_to_plot[i, idx_single_delay_d, 0]
+        only_T = results_to_plot[i, 0, idx_single_delay_t]
 
         color_list = [['red', 'skyblue', 'green'], ['darkred', 'royalblue', 'darkgreen']]
         marker_list = [["o", "x", "v"], ["^", "8", "s"]]
@@ -782,23 +784,27 @@ def ratio_aoi_with_no_delay(results, config_computation : dict, max_delay : floa
 
     # Axis stuff
     ax.set_xscale('log')
-    ticks = [0.011, 0.015, 0.02, 0.03, 0.045, 0.07]
-    ax.set_xticks(ticks, labels = ticks, minor = False)
-    ax.set_xticks(ticks, labels = ticks,minor = True)
     xlim = [max(min(d_values[idx_single_delay_d]), min(delay_values)),min(max(d_values[idx_single_delay_d]), max(delay_values))]
     ax.set_xlim(xlim)
+    ticks = np.round(np.geomspace(xlim[0], xlim[-1], 8), 3)
+    print(ticks)
+    ax.set_xticks(ticks, labels = ticks, minor = False)
+    ax.set_xticks(ticks, labels = ticks,minor = True)
+    ax.grid(True, 'major')
     ax.grid(True, 'major')
     
     # Legend and label
     ax.set_xlabel("Average Delay")
-    ax.set_ylabel("Average AoI")
+    if plot_ratio: ax.set_ylabel("Average AoI normalized to 0 delay")
+    else: ax.set_ylabel(r"Average AoI ($\Delta$)")
     ax.legend()
 
     fig.tight_layout()
     
     if config['save_fig']:
-        name = "delay_comparison"
-        file_type = 'eps'
+        if plot_ratio: name = "ratio_delay_with_no_delay"
+        else: name = "average_aoi_with_different_M"
+        file_type = 'pdf'
         filename = "Plot/delay/{}.{}".format(name, file_type)
         plt.savefig(filename, format=file_type)
 
@@ -856,9 +862,10 @@ def fix_one_delay(results, config_computation, fix_delay : float):
     ax.grid(True, 'major')
     
     # Legend and label
-    ax.set_xlabel("Average Delay")
-    ax.set_ylabel("Average AoI")
+    ax.set_xlabel(r"Average Delay")
+    ax.set_ylabel(r"Average AoI($\Delta$)")
     ax.legend()
+
     fig.tight_layout()
 
     if config_plot['save_fig']:
@@ -874,12 +881,12 @@ def fix_one_delay(results, config_computation, fix_delay : float):
     fig.show()
 
 
-def change_proportion(results, config_computation : dict, fixed_values_list : list):
+def change_proportion(config_computation : dict, fixed_values_list : list):
     """
     Given the fixed value of delay show how the AoI change based on the proportion a * D + (1 - a) * T
     """
 
-    alpha_list = np.linspace(0, 1, 100)
+    alpha_list = np.linspace(0, 1, 101)
 
     # Get plot config and create figure
     config_plot = get_plot_config()
@@ -888,30 +895,26 @@ def change_proportion(results, config_computation : dict, fixed_values_list : li
 
     color_list = [['skyblue', 'green'], ['royalblue', 'darkgreen']]
     marker_list = [["x", "v"], ["8", "s"]]
+
+    for i in range(len(fixed_values_list)):
+        fixed_value = fixed_values_list[i]
+        aoi_matrix = AoI_Delay_BOTH.compute_aoi_for_chagen_proportion_function(config_computation, fixed_value, alpha_list)
+
+        for j in range(len(config_computation['M_list'])):
+            M = config_computation['M_list'][j]
+
+            ax.plot(alpha_list, aoi_matrix[j], label = "Delay = {} (M = {})".format(fixed_value, M),
+                    color = color_list[i][j], 
+                    marker = marker_list[i][j], markevery = config_plot['markevery'], markersize = config_plot['markersize'])
+
+    ax.set_xlim([0, 1])
+    ax.grid(True, 'major')
     
-    for i in range(len(config_computation['M_list'])):
-        for j in range(len(fixed_values_list)):
-            fixed_value = fixed_values_list[j]
+    # Legend and label
+    ax.set_xlabel(r"$\alpha$")
+    ax.set_ylabel("Average AoI")
+    ax.legend()
+    fig.tight_layout()
 
-
-def compute_aoi_for_chagen_proportion_function(config_computation : dict, fixed_value : float, alpha_list):
-    """
-    Find the AoI for each value of the linear combination a * D + (1 - a) + T
-    results : matrix of shape D x T
-    """
-
-    if config_computation['d_points'] != config_computation['t_points']:
-        raise ValueError("You have to compute the AoI on the same number of points for D and T (i.e. d_points must be equal to t_points)")
-
-    # Compute d-values and t-values
-    d_values = np.geomspace(0.005, config_computation['d_max_delay'], config_computation['d_points'])
-    t_values = np.geomspace(0.005, config_computation['t_max_delay'], config_computation['t_points'])
-    
-    aoi_list = np.zeros((len(config_computation['M_list'], len(alpha_list))))
-    for i in range(len(config_computation['M_list'])):
-        for alpha in alpha_list:
-            delays_sum = alpha * d_values + (1 - alpha) * t_values
-        
-
-        
+    fig.show()
         
