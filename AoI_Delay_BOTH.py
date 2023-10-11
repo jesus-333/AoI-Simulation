@@ -362,12 +362,15 @@ def compute_aoi_for_chagen_proportion_function(config_computation : dict, fixed_
 
     if config_computation['d_points'] != config_computation['t_points']:
         raise ValueError("You have to compute the AoI on the same number of points for D and T (i.e. d_points must be equal to t_points)")
+    if len(alpha_list) % 2 != 0:
+        raise ValueError("You need an alpha list with an even number of elements")
 
-    # Compute d-values and t-values
-    d_values = np.linspace(0, fixed_value * 1.05, 700)
-    t_values = np.linspace(0, fixed_value * 1.05, 700)
+    # Compute the value to assign the two delays
+    correction_factor = alpha_list[len(alpha_list) // 2 + 1]
+    d_values = np.linspace(0, fixed_value, len(alpha_list) // 2)
+    t_values = np.flip(d_values)
 
-    delays_sum =  compute_delay_combination(alpha_list, d_values, t_values)
+    # delays_sum =  compute_delay_combination(alpha_list, d_values, t_values)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
 
@@ -376,22 +379,20 @@ def compute_aoi_for_chagen_proportion_function(config_computation : dict, fixed_
         M = config_computation['M_list'][i]
         for idx_alpha in range(len(alpha_list)):
             alpha = alpha_list[idx_alpha]
-            mask = np.ones(delays_sum[idx_alpha, :, :].shape)
-            if alpha <= 0.5:
-                mask = np.rot90(np.tril(mask))
-            else:
-                mask = np.rot90(np.triu(mask))
 
-            difference_with_fixed_value = np.abs(delays_sum[idx_alpha, :, :] - fixed_value)  
-            idx_D, idx_T = np.unravel_index(np.argmin(difference_with_fixed_value), difference_with_fixed_value.shape)
+            if alpha < 0.5: # T must be greater than D
+                D = d_values[idx_alpha]
+                T = (fixed_value - alpha * D) / (1 - alpha)
+            elif alpha == 0.5: # T must be equal to D
+                D = T = fixed_value
+            elif alpha > 0.5: # T must be smaller than D
+                T = t_values[idx_alpha - (len(t_values))]
+                D = (fixed_value - (1 - alpha) * T ) / alpha
 
-            D = d_values[idx_D]
-            T = t_values[idx_T]
-
-            print(alpha_list[idx_alpha], fixed_value)
-            print(alpha * D + (1 - alpha) * T) 
-            print("D: idx = {} - value = {}".format(idx_D, D))
-            print("T: idx = {} - value = {}\n".format(idx_T, T))
+            print(idx_alpha, alpha)
+            print("D = ", D)
+            print("T = ", T)
+            print("- - - - - -- - - - -- -")
 
             aoi_matrix[i, idx_alpha] = aoi_theory_formula(M, D, T, config_computation['d_type'])
 
@@ -447,3 +448,8 @@ def plot_fix_one_delay(fix_delay = 0.02):
     results = compute_aoi_theory_multiple_value(config_computation)
 
     plot_aoi.fix_one_delay(results, config_computation, fix_delay)
+
+
+def plot_chage_proportion(fixed_value_list = [0.02, 0.05]):
+    config_computation = get_config_computation()
+    plot_aoi.change_proportion(config_computation, fixed_value_list)

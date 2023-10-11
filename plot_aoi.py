@@ -886,7 +886,7 @@ def change_proportion(config_computation : dict, fixed_values_list : list):
     Given the fixed value of delay show how the AoI change based on the proportion a * D + (1 - a) * T
     """
 
-    alpha_list = np.linspace(0, 1, 101)
+    alpha_list = np.linspace(0, 1, 200)
 
     # Get plot config and create figure
     config_plot = get_plot_config()
