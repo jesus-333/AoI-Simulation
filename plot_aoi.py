@@ -863,7 +863,7 @@ def fix_one_delay(results, config_computation, fix_delay : float):
     
     # Legend and label
     ax.set_xlabel(r"Average Delay")
-    ax.set_ylabel(r"Average AoI($\Delta$)")
+    ax.set_ylabel(r"Average AoI $\Delta$")
     ax.legend()
 
     fig.tight_layout()
@@ -893,7 +893,7 @@ def change_proportion(config_computation : dict, fixed_values_list : list):
     plt.rcParams.update({'font.size': config_plot['fontsize']})
     fig, ax = plt.subplots(1, 1, figsize = config_plot['figsize']) 
 
-    color_list = [['darkturquoise', 'green'], ['royalblue', 'darkgreen']]
+    color_list = [['red', 'violet'], ['darkred', 'darkviolet']]
     marker_list = [["x", "v"], ["8", "s"]]
 
     for i in range(len(fixed_values_list)):
@@ -903,7 +903,7 @@ def change_proportion(config_computation : dict, fixed_values_list : list):
         for j in range(len(config_computation['M_list'])):
             M = config_computation['M_list'][j]
 
-            ax.plot(alpha_list, aoi_matrix[j], label = "Delay = {} (M = {})".format(fixed_value, M),
+            ax.plot(alpha_list, aoi_matrix[j], label = "Delay = {} (M = {}))".format(fixed_value, M),
                     color = color_list[i][j], 
                     marker = marker_list[i][j], markevery = config_plot['markevery'], markersize = config_plot['markersize'])
 
@@ -913,8 +913,18 @@ def change_proportion(config_computation : dict, fixed_values_list : list):
     # Legend and label
     ax.set_xlabel(r"$\alpha$")
     ax.set_ylabel("Average AoI")
-    ax.legend()
+    ax.legend(fontsize = 23, loc = 'upper right')
     fig.tight_layout()
+
+    if config_plot['save_fig']:
+        name = "change_proportion_D_{}_T_{}".format(config_computation['d_type'], config_computation['t_type'])
+        file_type = 'pdf'
+        filename = "Plot/delay/{}.{}".format(name, file_type)
+        plt.savefig(filename, format = file_type)
+
+        file_type = 'png'
+        filename = "Plot/delay/{}.{}".format(name, file_type)
+        plt.savefig(filename, format = file_type)
 
     fig.show()
         
