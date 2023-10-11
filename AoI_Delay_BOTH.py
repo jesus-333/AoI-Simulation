@@ -351,6 +351,7 @@ def compute_aoi_simulation_multiple_value(config : dict, print_var = False):
 
     return results_average, results_std
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
 def compute_aoi_for_chagen_proportion_function(config_computation : dict, fixed_value : float, alpha_list):
     """
@@ -366,7 +367,6 @@ def compute_aoi_for_chagen_proportion_function(config_computation : dict, fixed_
         raise ValueError("You need an alpha list with an even number of elements")
 
     # Compute the value to assign the two delays
-    correction_factor = alpha_list[len(alpha_list) // 2 + 1]
     d_values = np.linspace(0, fixed_value, len(alpha_list) // 2)
     t_values = np.flip(d_values)
 
@@ -398,19 +398,19 @@ def compute_aoi_for_chagen_proportion_function(config_computation : dict, fixed_
 
     return aoi_matrix
 
-@jit(nopython = True, parallel = False)
-def compute_delay_combination(alpha_list, d_values, t_values):
-    delays_sum = np.zeros((len(alpha_list), len(d_values), len(t_values)))
-    for i in range(len(alpha_list)):
-        alpha = alpha_list[i]
-        for j in range(len(d_values)):
-            D = d_values[j]
-            for k in range(len(t_values)):
-                T = t_values[k]
-                delays_sum[i, j, k] = alpha * D + (1 - alpha) * T
+def compute_aoi_vs_M_values(config_computation, delay_values):
 
-    return delays_sum
+    results = np.zeros((3 * len(delay_values), len(config_computation['M_list'])))
 
+    for i in range(len(delay_values)):
+        delay = delay_values[i]
+        for j in range(len(config_computation['M_list'])):
+            M = config_computation['M_list'][j]
+            results[(i * 3) + 0, j] = aoi_theory_formula(M, delay_values, 0, config_computation['d_type']) # Only D delay
+            results[(i * 3) + 1, j] = aoi_theory_formula(M, 0, delay_values, config_computation['d_type']) # Only T Delay
+            results[(i * 3) + 2, j] = aoi_theory_formula(M, delay_values / 2, delay_values / 2, config_computation['d_type']) # Both delay
+
+    return results
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 # Function to run the simulation and create the plot
@@ -436,20 +436,26 @@ def plot_distribution_difference(max_delay : float = 0.08, idx_M : int = 0):
 
     plot_aoi.plot_both_delay_different_distribution(results_uniform, results_exp, config_computation, max_delay, idx_M)
 
-
 def plot_M_difference(max_delay : float = 0.08, idx_M : int = 0):
     config_computation = get_config_computation()
     results = compute_aoi_theory_multiple_value(config_computation)
 
     plot_aoi.aoi_for_different_M(results, config_computation, max_delay, idx_M)
 
-def plot_fix_one_delay(fix_delay = 0.02):
+def plot_fix_one_delay(fix_delay = 0.04):
     config_computation = get_config_computation()
     results = compute_aoi_theory_multiple_value(config_computation)
 
     plot_aoi.fix_one_delay(results, config_computation, fix_delay)
 
-
 def plot_chage_proportion(fixed_value_list = [0.02, 0.05]):
     config_computation = get_config_computation()
     plot_aoi.change_proportion(config_computation, fixed_value_list)
+
+def plot_aoi_vs_M():
+    config_computation = get_config_computation()
+
+    delay_values = [0.005, 0.04]
+    config_computation['M_list'] = np.arange(3, 20)
+    results =  compute_aoi_vs_M_values(config_computation, delay_values)
+
