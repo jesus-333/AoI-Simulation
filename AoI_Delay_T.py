@@ -27,7 +27,7 @@ def get_config_computation():
         t_type = 'uniform',
         t_min_delay = 0.005,
         t_max_delay = 0.3,
-        M_list = [4, 5, 8, 10],
+        M_list = [4, 5, 8, 10], 
         # M_list = np.arange(3, 20),
         # Parameter only for the simulation 
         use_sum_for_theory = True,
@@ -306,6 +306,7 @@ def aoi_vs_M():
 
 def theory_vs_simulation():
     config_computation = get_config_computation()
+    config_computation['M_list'] = [4, 5]
     results_theory = compute_aoi_theory_multiple_value(config_computation)
     results_sim = compute_aoi_simulation_multiple_value(config_computation)
     
@@ -368,8 +369,8 @@ def plot_aoi_vs_T(results, config_computation, config_plot):
     
     ax.legend()
 
-    ax.set_ylabel(r"Average AoI ($\Delta$)")
-    ax.set_xlabel("Average Delay (E[T])")
+    ax.set_ylabel(r"Average AoI $\Delta$")
+    ax.set_xlabel(r"Average Delay E[T]")
     ax.set_xlim([t_values[0], t_values[-1]])
     if config_plot['use_log_scale']: ax.set_xscale('log') 
 
@@ -382,7 +383,7 @@ def plot_aoi_vs_T(results, config_computation, config_plot):
     fig.tight_layout()
     if config_plot['save_fig']: 
         fig.savefig(config_plot['save_path'] + "Single_Delay_T_AoI_VS_T.png")
-        fig.savefig(config_plot['save_path'] + "Single_Delay_T_AoI_VS_T.eps")
+        fig.savefig(config_plot['save_path'] + "Single_Delay_T_AoI_VS_T.pdf")
     plt.show()
 
 
@@ -402,14 +403,14 @@ def plot_aoi_vs_M(results, config_computation, config_plot):
                 )
     ax.legend()
 
-    ax.set_ylabel(r"Average AoI ($\Delta$)")
-    ax.set_xlabel("Number of transmissions (M)")
+    ax.set_ylabel(r"Average AoI $\Delta$")
+    ax.set_xlabel("Number of transmissions M")
     ax.set_xlim([M_values[0], M_values[-1]])
     ax.grid(True)
     
     fig.tight_layout()
     if config_plot['save_fig']: 
-        fig.savefig(config_plot['save_path'] + "Single_Delay_T_AoI_VS_M.eps")
+        fig.savefig(config_plot['save_path'] + "Single_Delay_T_AoI_VS_M.pdf")
         fig.savefig(config_plot['save_path'] + "Single_Delay_T_AoI_VS_M.png")
     plt.show()
 
@@ -433,9 +434,9 @@ def plot_theory_vs_sim_delay_T(results_theory, results_sim, config_computation, 
     
     ax.legend()
 
-    ax.set_ylabel(r"Average AoI ($\Delta$)")
-    ax.set_xlabel("Average Delay (E[T])")
-    # ax.set_xlabel("Average Delay ($\mathbb{E}[T]$)")
+    ax.set_ylabel(r"Average AoI $\Delta$")
+    ax.set_xlabel("Average Delay E[T]")
+    ax.set_xlabel("Average Delay $\mathbb{E}[T]$")
     ax.set_xlim([t_values[0], t_values[-1]])
     if config_plot['use_log_scale']: ax.set_xscale('log') 
 
@@ -447,7 +448,7 @@ def plot_theory_vs_sim_delay_T(results_theory, results_sim, config_computation, 
     
     fig.tight_layout()
     if config_plot['save_fig']: 
-        fig.savefig(config_plot['save_path'] + "Single_Delay_T_Sim_VS_Theory_{}.eps".format(config_computation['t_type']))
+        fig.savefig(config_plot['save_path'] + "Single_Delay_T_Sim_VS_Theory_{}.pdf".format(config_computation['t_type']))
         fig.savefig(config_plot['save_path'] + "Single_Delay_T_Sim_VS_Theory_{}.png".format(config_computation['t_type']))
     plt.show()
 
@@ -467,14 +468,14 @@ def plot_probability_overflow(results, config_computation, config_plot):
     ax.legend()
 
     ax.set_ylabel("Probability of overflow")
-    ax.set_xlabel("Average Delay (E[T])")
+    ax.set_xlabel("Average Delay E[T]")
     ax.set_xlim([t_values[0], t_values[-1]])
     # ax.set_ylim([0, 1])
     ax.grid(True)
     
     fig.tight_layout()
     if config_plot['save_fig']: 
-        fig.savefig(config_plot['save_path'] + "probability_fail_tx_{}.eps".format(config_computation['t_type']))
+        fig.savefig(config_plot['save_path'] + "probability_fail_tx_{}.pdf".format(config_computation['t_type']))
         fig.savefig(config_plot['save_path'] + "probability_fail_tx_{}.png".format(config_computation['t_type']))
     plt.show()
 
@@ -501,8 +502,8 @@ def plot_optimized_vs_NOT_optimized(results_optimized, results_NOT_optimized, co
     if plot_ratio:
         ax.set_ylabel("Not optimized/Optimized AoI ratio")
     else:
-        ax.set_ylabel(r"Average AoI ($\Delta$)")
-    ax.set_xlabel("Average Delay (E[T])")
+        ax.set_ylabel(r"Average AoI $\Delta$")
+    ax.set_xlabel("Average Delay E[T]")
     ax.set_xlim([t_values[0], t_values[-1]])
     if config_plot['use_log_scale']: ax.set_xscale('log') 
 
@@ -520,6 +521,6 @@ def plot_optimized_vs_NOT_optimized(results_optimized, results_NOT_optimized, co
         else:
             title = config_plot['save_path'] + "optimized_vs_NOT_optimized" 
         fig.savefig(title + ".png")
-        fig.savefig(title + ".eps")
+        fig.savefig(title + ".pdf")
 
     plt.show()
