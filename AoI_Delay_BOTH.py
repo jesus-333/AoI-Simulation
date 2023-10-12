@@ -28,11 +28,11 @@ def get_config_computation():
         d_points = 100,
         d_type = 'uniform',
         d_min_delay = 0.001,
-        d_max_delay = 0.08,
+        d_max_delay = 0.1,
         t_points = 100,
         t_type = 'uniform',
         t_min_delay = 0.001,
-        t_max_delay = 0.08,
+        t_max_delay = 0.1,
         M_list = [4, 5],
         # M_list = np.arange(3, 20),
         # Parameter only for the simulation 
@@ -394,7 +394,8 @@ def compute_aoi_for_chagen_proportion_function(config_computation : dict, fixed_
             print("T = ", T)
             print("- - - - - -- - - - -- -")
 
-            aoi_matrix[i, idx_alpha] = aoi_theory_formula(M, D, T, config_computation['d_type'])
+            # aoi_matrix[i, idx_alpha] = aoi_theory_formula(M, D, T, config_computation['d_type'])
+            aoi_matrix[i, idx_alpha] = aoi_theory_formula(M, alpha * D, (1 - alpha) * T, config_computation['d_type'])
 
     return aoi_matrix
 
@@ -406,9 +407,9 @@ def compute_aoi_vs_M_values(config_computation, delay_values):
         delay = delay_values[i]
         for j in range(len(config_computation['M_list'])):
             M = config_computation['M_list'][j]
-            results[(i * 3) + 0, j] = aoi_theory_formula(M, delay_values, 0, config_computation['d_type']) # Only D delay
-            results[(i * 3) + 1, j] = aoi_theory_formula(M, 0, delay_values, config_computation['d_type']) # Only T Delay
-            results[(i * 3) + 2, j] = aoi_theory_formula(M, delay_values / 2, delay_values / 2, config_computation['d_type']) # Both delay
+            results[(i * 3) + 0, j] = aoi_theory_formula(M, delay, 0, config_computation['d_type']) # Only D delay
+            results[(i * 3) + 1, j] = aoi_theory_formula(M, 0, delay, config_computation['d_type']) # Only T Delay
+            results[(i * 3) + 2, j] = aoi_theory_formula(M, delay / 2, delay / 2, config_computation['d_type']) # Both delay
 
     return results
 
@@ -455,7 +456,8 @@ def plot_chage_proportion(fixed_value_list = [0.02, 0.05]):
 def plot_aoi_vs_M():
     config_computation = get_config_computation()
 
-    delay_values = [0.005, 0.04]
-    config_computation['M_list'] = np.arange(3, 20)
+    delay_values = [0.005, 0.05]
+    config_computation['M_list'] = np.arange(3, 17)
     results =  compute_aoi_vs_M_values(config_computation, delay_values)
+    plot_aoi.both_delay_aoi_vs_M(results, delay_values, config_computation)
 

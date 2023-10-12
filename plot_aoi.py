@@ -856,6 +856,7 @@ def fix_one_delay(results, config_computation, fix_delay : float):
                 
     ax.set_xscale('log')
     ticks = np.round(np.geomspace(0.005, config_computation['d_max_delay'], 6), 3) 
+    ticks = [0.005, 0.01, 0.02, 0.05, 0.1]
     ax.set_xticks(ticks, labels = ticks, minor = False)
     ax.set_xticks(ticks, labels = ticks,minor = True)
     ax.set_xlim([min(d_values), max(d_values)])
@@ -890,6 +891,7 @@ def change_proportion(config_computation : dict, fixed_values_list : list):
 
     # Get plot config and create figure
     config_plot = get_plot_config()
+    config_plot['markevery'] = 10
     plt.rcParams.update({'font.size': config_plot['fontsize']})
     fig, ax = plt.subplots(1, 1, figsize = config_plot['figsize']) 
 
@@ -912,7 +914,7 @@ def change_proportion(config_computation : dict, fixed_values_list : list):
     
     # Legend and label
     ax.set_xlabel(r"$\alpha$")
-    ax.set_ylabel("Average AoI")
+    ax.set_ylabel(r"Average AoI $\Delta$")
     ax.legend(fontsize = 23, loc = 'upper right')
     fig.tight_layout()
 
@@ -928,3 +930,48 @@ def change_proportion(config_computation : dict, fixed_values_list : list):
 
     fig.show()
         
+
+def both_delay_aoi_vs_M(results, delays_values, config_computation):
+    # Get plot config and create figure
+    config_plot = get_plot_config()
+    config_plot['markevery'] = 2
+    plt.rcParams.update({'font.size': config_plot['fontsize']})
+    fig, ax = plt.subplots(1, 1, figsize = config_plot['figsize']) 
+    
+    # Color of the various line
+    color_list = [['red', 'darkturquoise', 'green'], ['darkred', 'royalblue', 'darkgreen']]
+    marker_list = [["o", "x", "v"], ["^", "8", "s"]]
+    
+    for i in range(len(delays_values)):
+        delay = delays_values[i]
+
+        only_D     = results[(i * 3) + 0]
+        only_T     = results[(i * 3) + 1]
+        both_delay = results[(i * 3) + 2]
+
+        ax.plot(config_computation['M_list'], both_delay, label = "Both delays (delay = {})".format(delay), 
+                color = color_list[i][0], marker = marker_list[i][0], markevery = config_plot['markevery'], markersize = config_plot['markersize'])
+        ax.plot(config_computation['M_list'], only_D, label = "Only D delay (delay = {})".format(delay), 
+                color = color_list[i][1], marker = marker_list[i][1], markevery = config_plot['markevery'], markersize = config_plot['markersize'])
+        ax.plot(config_computation['M_list'], only_T, label = "Only T delay (delay = {})".format(delay), 
+                color = color_list[i][2], marker = marker_list[i][2], markevery = config_plot['markevery'], markersize = config_plot['markersize'])
+
+    ax.set_xlim([config_computation['M_list'][0], config_computation['M_list'][-1]])
+    ax.grid(True, 'major')
+
+    ax.set_xlabel(r"Number of Transmission M")
+    ax.set_ylabel(r"Average AoI $\Delta$")
+    ax.legend()
+    fig.tight_layout()
+
+    if config_plot['save_fig']:
+        name = "both_delay_aoi_vs_M_D_{}_T_{}".format(config_computation['d_type'], config_computation['t_type'])
+        file_type = 'pdf'
+        filename = "Plot/delay/{}.{}".format(name, file_type)
+        plt.savefig(filename, format = file_type)
+
+        file_type = 'png'
+        filename = "Plot/delay/{}.{}".format(name, file_type)
+        plt.savefig(filename, format = file_type)
+
+    fig.show()
