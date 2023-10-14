@@ -375,6 +375,7 @@ def plot_aoi_vs_T(results, config_computation, config_plot):
     if config_plot['use_log_scale']: ax.set_xscale('log') 
 
     ticks = np.round(np.geomspace(config_computation['t_min_delay'], config_computation['t_max_delay'], config_plot['n_ticks']), 3)
+    ticks = [0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.3]
     ax.set_xticks(ticks)
     ax.set_xticklabels(ticks)
     ax.set_xticks(ticks, minor = True)
@@ -441,6 +442,7 @@ def plot_theory_vs_sim_delay_T(results_theory, results_sim, config_computation, 
     if config_plot['use_log_scale']: ax.set_xscale('log') 
 
     ticks = np.round(np.geomspace(config_computation['t_min_delay'], config_computation['t_max_delay'], config_plot['n_ticks']), 3)
+    ticks = [0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.3]
     ax.set_xticks(ticks)
     ax.set_xticklabels(ticks)
     ax.set_xticks(ticks, minor = True)
@@ -508,6 +510,7 @@ def plot_optimized_vs_NOT_optimized(results_optimized, results_NOT_optimized, co
     if config_plot['use_log_scale']: ax.set_xscale('log') 
 
     ticks = np.round(np.geomspace(config_computation['t_min_delay'], config_computation['t_max_delay'], config_plot['n_ticks']), 3)
+    ticks = [0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.3]
     ax.set_xticks(ticks)
     ax.set_xticklabels(ticks)
     ax.set_xticks(ticks, minor = True)
