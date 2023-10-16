@@ -9,7 +9,6 @@ Simulation for the the AoI work with both activation delay (D) and propagation d
 # Imports
 
 import numpy as np
-import time
 from numba import jit
 import matplotlib.pyplot as plt
 
@@ -124,7 +123,7 @@ def var(x, x_type):
 
     return expected_value_squared - (x ** 2)
 
-def probability_overflow(M : int, D : float, T : float, d_type : str, t_type : str):
+def probability_overflow_theory(M : int, D : float, T : float, d_type : str, t_type : str):
     # TODO 
     prob = -1
     if t_type == 'uniform':
@@ -202,7 +201,7 @@ def compare_aoi_formula():
     print("Average difference between sum and exact formula: ", np.mean(results_sum - results_formula))
 
 
-def compute_probability_overflow_multiple_value(config : dict):
+def compute_probability_overflow_multiple_value_theory(config : dict):
     t_values = config['t_values']
     d_values = config['d_values']
     results = np.zeros((len(config['M_list']), len(d_values), len(t_values)))
@@ -268,21 +267,29 @@ def simulation(L : int, M : int, average_d :float, d_type : str, average_t :floa
     return aoi_history, current_tx_instant
 
 @jit(nopython = True, parallel = False)
-def aoi_simulation(L : int, M : int, D : float, d_type : str, T : float, t_type: str, repeat_simulation : int = 1, integration_type : int = 0):
+def aoi_simulation(L : int, M : int, D : float, d_type : str, T : float, t_type: str, repeat_simulation : int = 1, integration_type : int = 0, use_only_complete_simulations = True):
     tmp_results = np.zeros(repeat_simulation)
+    complete_simulations = 0
     for k in range(repeat_simulation):
         last_tx_instant = 0
-        i = 0
-        while last_tx_instant != 1:
-            i+=1
+
+        if use_only_complete_simulations:
+            # If true keep only the simulation where all the tx are complete
+            i = 0
+            while last_tx_instant != 1:
+                i+=1
+                aoi_history, last_tx_instant = simulation(L, M, D, d_type, T, t_type)
+        else:
             aoi_history, last_tx_instant = simulation(L, M, D, d_type, T, t_type)
+
+        if last_tx_instant == 1: complete_simulations += 1
 
         if integration_type == 0: aoi_average = np.mean(aoi_history)
         elif integration_type == 1: aoi_average = np.trapz(aoi_history, np.linspace(0, 1, len(aoi_history)))
 
         tmp_results[k] = aoi_average
 
-    return np.mean(tmp_results), np.std(tmp_results)
+    return np.mean(tmp_results), np.std(tmp_results), complete_simulations / repeat_simulation
 
 @jit(nopython = True, parallel = False)
 def compute_transmission_instant(y_array):
@@ -341,7 +348,7 @@ def compute_aoi_simulation_multiple_value(config : dict, print_var = False):
                     t_percentage = round((k + 1) / len(config['t_values']) * 100)
                     print("{}% M_list ({})\t {}% d_values ({})\t {}% t_values ({})".format(M_percentage, M, d_percentage, D, t_percentage, T))
 
-                results_average[i, j, k], results_std[i, j, k] = aoi_simulation(config['L'], M, D, config['d_type'], T, config['t_type'], config['repeat_simulation'], config['integration_type'])
+                results_average[i, j, k], results_std[i, j, k], _ = aoi_simulation(config['L'], M, D, config['d_type'], T, config['t_type'], config['repeat_simulation'], config['integration_type'])
         
         # Save the results after each iteration through the M list
         with open('results_simulation_average.npy', 'wb') as f:
@@ -350,6 +357,24 @@ def compute_aoi_simulation_multiple_value(config : dict, print_var = False):
             np.save(f, results_std)
 
     return results_average, results_std
+
+def compute_probability_overflow_multiple_value_simulation(config, print_var = False): 
+    delay_values = config['d_values']
+    overflow_prob  = np.zeros(len(delay_values))
+
+    M = config['M_list'][0]
+    for i in range(len(delay_values)): # Iterate through different values of D delay
+        D = delay_values[i]
+        T = delay_values[i]
+
+        _, _, percentage_complete_simulation = aoi_simulation(config['L'], M, D, config['d_type'], T, config['t_type'], 
+                                                              config['repeat_simulation'], config['integration_type'], False)
+        overflow_prob[i] = 1 - percentage_complete_simulation 
+
+        if print_var:
+            print("Percentage simulation complete {}%".format(round(100 * (i + 1) / len(delay_values)), 2))
+
+    return overflow_prob
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
@@ -413,6 +438,7 @@ def compute_aoi_vs_M_values(config_computation, delay_values):
 
     return results
 
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 # Function to run the simulation and create the plot
 
@@ -461,3 +487,33 @@ def plot_aoi_vs_M():
     results =  compute_aoi_vs_M_values(config_computation, delay_values)
     plot_aoi.both_delay_aoi_vs_M(results, delay_values, config_computation)
 
+def plot_overflow_prob():
+    config_computation = get_config_computation()
+    config_computation['M_list'] = [4]
+    config_computation['d_values'] = np.geomspace(0.01, 0.2, config_computation['d_points'])
+    config_computation['repeat_simulation'] = 4000
+
+    config_computation['d_type'] = 'uniform'
+    config_computation['t_type'] = 'uniform'
+    label_uu = 'D = Uni - T = Uni'
+    overflow_prob_uu = compute_probability_overflow_multiple_value_simulation(config_computation, True)
+
+    config_computation['d_type'] = 'uniform'
+    config_computation['t_type'] = 'exponential'
+    label_ue = 'D = Uni - T = Exp'
+    overflow_prob_ue = compute_probability_overflow_multiple_value_simulation(config_computation, True)
+
+    config_computation['d_type'] = 'exponential'
+    config_computation['t_type'] = 'uniform'
+    label_eu = 'D = Exp - T = Uni'
+    overflow_prob_eu = compute_probability_overflow_multiple_value_simulation(config_computation, True)
+
+    config_computation['d_type'] = 'exponential'
+    config_computation['t_type'] = 'exponential'
+    label_ee = 'D = Exp - T = Exp'
+    overflow_prob_ee = compute_probability_overflow_multiple_value_simulation(config_computation, True)
+
+    overflow_prob_list = [overflow_prob_uu, overflow_prob_ue, overflow_prob_eu, overflow_prob_ee]
+    label_list = [label_uu, label_ue, label_eu, label_ee]
+
+    plot_aoi.overflow_prob_both_delay(overflow_prob_list, label_list, config_computation)

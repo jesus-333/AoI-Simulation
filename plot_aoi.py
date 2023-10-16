@@ -504,7 +504,7 @@ def plot_delay_comparison(results, config_computation : dict, max_delay : float 
     
     # Indices for the combined delay and valued of the combined delay
     idx_both_delays = np.zeros(results.shape)
-    idx_both_delays, delay_values= compute_idx_both_delays(idx_both_delays, d_values, t_values, max_delay, idx_M)
+    idx_both_delays, delay_values = compute_idx_both_delays(idx_both_delays, d_values, t_values, max_delay, idx_M)
     both_delay = results[idx_both_delays]
     
     idx_single_delay_d = np.logical_and(d_values >= min(delay_values), d_values <= max(delay_values))
@@ -763,7 +763,7 @@ def aoi_for_different_M(results, config_computation : dict, max_delay : float = 
         
         # Indices for the combined delay and valued of the combined delay
         idx_both_delays = np.zeros(results.shape)
-        idx_both_delays, delay_values= compute_idx_both_delays(idx_both_delays, d_values, t_values, max_delay,i)
+        idx_both_delays, delay_values= compute_idx_both_delays(idx_both_delays, d_values, t_values, max_delay, i)
         both_delay = results_to_plot[idx_both_delays]
         
         idx_single_delay_d = np.logical_and(d_values >= min(delay_values), d_values <= max(delay_values))
@@ -955,9 +955,9 @@ def both_delay_aoi_vs_M(results, delays_values, config_computation):
                 color = color_list[i][1], marker = marker_list[i][1], markevery = config_plot['markevery'], markersize = config_plot['markersize'])
         ax.plot(config_computation['M_list'], only_T, label = "Only T delay (delay = {})".format(delay), 
                 color = color_list[i][2], marker = marker_list[i][2], markevery = config_plot['markevery'], markersize = config_plot['markersize'])
-
     ax.set_xlim([config_computation['M_list'][0], config_computation['M_list'][-1]])
     ax.grid(True, 'major')
+
 
     ax.set_xlabel(r"Number of Transmission M")
     ax.set_ylabel(r"Average AoI $\Delta$")
@@ -966,6 +966,49 @@ def both_delay_aoi_vs_M(results, delays_values, config_computation):
 
     if config_plot['save_fig']:
         name = "both_delay_aoi_vs_M_D_{}_T_{}".format(config_computation['d_type'], config_computation['t_type'])
+        file_type = 'pdf'
+        filename = "Plot/delay/{}.{}".format(name, file_type)
+        plt.savefig(filename, format = file_type)
+
+        file_type = 'png'
+        filename = "Plot/delay/{}.{}".format(name, file_type)
+        plt.savefig(filename, format = file_type)
+
+    fig.show()
+
+def overflow_prob_both_delay(results_list, labels_list, config_computation):
+    config_plot = get_plot_config()
+    color_list = ['red', 'orange', 'darkturquoise', 'green']
+    marker_list = ["o", "x", "v", "^"]
+
+    plt.rcParams.update({'font.size': config_plot['fontsize']})
+    fig, ax = plt.subplots(1, 1, figsize = config_plot['figsize'])
+    
+    delay_values = config_computation['d_values']
+    for i in range(len(results_list)):
+        results = results_list[i]
+        label = labels_list[i]
+
+        ax.plot(delay_values, results, label = label, color = color_list[i], 
+                marker = marker_list[i], markevery = config_plot['markevery'], markersize = config_plot['markersize'])
+
+    ax.set_xscale('log')
+    ticks = [0.005, 0.01, 0.02, 0.05, 0.1, 0.2]
+    ax.set_xticks(ticks, labels = ticks, minor = False)
+    ax.set_xticks(ticks, labels = ticks,minor = True)
+    ax.set_xlim([min(delay_values), max(delay_values)])
+    ax.set_ylim([0, 0.6])
+    ax.grid(True, 'major')
+    
+    # Legend and label
+    ax.set_xlabel(r"Average Delay")
+    ax.set_ylabel(r"Overflow Probability")
+    ax.legend(loc = 'upper left')
+
+    fig.tight_layout()
+
+    if config_plot['save_fig']:
+        name = "overflow_prob_M_{}".format(config_computation['M_list'][0])
         file_type = 'pdf'
         filename = "Plot/delay/{}.{}".format(name, file_type)
         plt.savefig(filename, format = file_type)
