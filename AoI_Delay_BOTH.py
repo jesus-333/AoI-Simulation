@@ -27,11 +27,11 @@ def get_config_computation():
         d_points = 100,
         d_type = 'uniform',
         d_min_delay = 0.001,
-        d_max_delay = 0.1,
+        d_max_delay = 0.18,
         t_points = 100,
         t_type = 'uniform',
         t_min_delay = 0.001,
-        t_max_delay = 0.1,
+        t_max_delay = 0.18,
         M_list = [4, 5],
         # M_list = np.arange(3, 20),
         # Parameter only for the simulation 
@@ -483,6 +483,7 @@ def plot_aoi_vs_M():
     config_computation = get_config_computation()
 
     delay_values = [0.005, 0.05]
+    delay_values = [0.01, 0.05]
     config_computation['M_list'] = np.arange(3, 17)
     results =  compute_aoi_vs_M_values(config_computation, delay_values)
     plot_aoi.both_delay_aoi_vs_M(results, delay_values, config_computation)
@@ -490,7 +491,7 @@ def plot_aoi_vs_M():
 def plot_overflow_prob():
     config_computation = get_config_computation()
     config_computation['M_list'] = [4]
-    config_computation['d_values'] = np.geomspace(0.01, 0.2, config_computation['d_points'])
+    config_computation['d_values'] = np.geomspace(0.01, 0.1, config_computation['d_points'])
     config_computation['repeat_simulation'] = 4000
 
     config_computation['d_type'] = 'uniform'
