@@ -878,7 +878,7 @@ def fix_one_delay(results, config_computation, fix_delay : float):
                 
     ax.set_xscale('log')
     ticks = np.round(np.geomspace(0.005, config_computation['d_max_delay'], 6), 3) 
-    ticks = [0.005, 0.01, 0.02, 0.05, 0.1]
+    ticks = [0.002, 0.005, 0.01, 0.02, 0.05, 0.1]
     ax.set_xticks(ticks, labels = ticks, minor = False)
     ax.set_xticks(ticks, labels = ticks,minor = True)
     ax.set_xlim([min(d_values), max(d_values)])

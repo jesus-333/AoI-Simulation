@@ -490,28 +490,28 @@ def plot_aoi_vs_M():
 
 def plot_overflow_prob():
     config_computation = get_config_computation()
-    config_computation['M_list'] = [4]
+    config_computation['M_list'] = [6]
     config_computation['d_values'] = np.geomspace(0.01, 0.1, config_computation['d_points'])
     config_computation['repeat_simulation'] = 4000
 
     config_computation['d_type'] = 'uniform'
     config_computation['t_type'] = 'uniform'
-    label_uu = 'D = Uni - T = Uni'
+    label_uu = r'D ~ $U(0, 2x)$   T ~ U(0, 2x)'
     overflow_prob_uu = compute_probability_overflow_multiple_value_simulation(config_computation, True)
 
     config_computation['d_type'] = 'uniform'
     config_computation['t_type'] = 'exponential'
-    label_ue = 'D = Uni - T = Exp'
+    label_ue = 'D ~ $U(0, 2x)$   T ~ $Exp(1/x)$'
     overflow_prob_ue = compute_probability_overflow_multiple_value_simulation(config_computation, True)
 
     config_computation['d_type'] = 'exponential'
     config_computation['t_type'] = 'uniform'
-    label_eu = 'D = Exp - T = Uni'
+    label_eu = 'D ~ $Exp(1/x)$  T ~ $U(0, 2x)$'
     overflow_prob_eu = compute_probability_overflow_multiple_value_simulation(config_computation, True)
 
     config_computation['d_type'] = 'exponential'
     config_computation['t_type'] = 'exponential'
-    label_ee = 'D = Exp - T = Exp'
+    label_ee = 'D ~ $Exp(1/x)$  T ~ $Exp(1/x)$'
     overflow_prob_ee = compute_probability_overflow_multiple_value_simulation(config_computation, True)
 
     overflow_prob_list = [overflow_prob_uu, overflow_prob_ue, overflow_prob_eu, overflow_prob_ee]
